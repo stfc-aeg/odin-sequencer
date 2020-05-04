@@ -1,6 +1,6 @@
 # Basic command sequences for testing CommandSequenceManager
 
-provides = ['basic_read', 'basic_write']
+provides = ['basic_read', 'basic_write', 'basic_return_value']
 
 def basic_read():
 
@@ -10,3 +10,7 @@ def basic_read():
 def basic_write():
 
     print("Basic write")
+
+def basic_return_value(value):
+
+    return value
