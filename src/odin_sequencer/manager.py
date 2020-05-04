@@ -64,7 +64,20 @@ class CommandSequenceManager():
         # Create a module specification and attempt to load the module
         spec = importlib.util.spec_from_file_location(module_name, file_path)
         module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
+        try:
+            spec.loader.exec_module(module)
+        except SyntaxError as import_error:
+            raise CommandSequenceError(
+                'Syntax error loading {}: {}'.format(file_path, import_error)
+            )
+        except ModuleNotFoundError as import_error:
+            raise CommandSequenceError(
+                'Import error loading {}: {}'.format(file_path, import_error)
+            )
+        except FileNotFoundError:
+            raise CommandSequenceError(
+                'Sequence module file {} not found'.format(file_path)
+            )
 
         # If the module declares which sequence functions it provides, use that, otherwise assume
         # that all functions are to be made available
@@ -176,4 +189,7 @@ class CommandSequenceManager():
         :param name: name of the object to access from the context
         :return: the named object
         """
+        if name not in self.context:
+            raise CommandSequenceError('Manager context does not contain {}'.format(name))
+
         return self.context[name]
