@@ -75,7 +75,7 @@ class CommandSequenceManager():
             raise CommandSequenceError(
                 'Syntax error loading {}: {}'.format(file_path, import_error)
             )
-        except ModuleNotFoundError as import_error:
+        except (ModuleNotFoundError, ImportError) as import_error:
             raise CommandSequenceError(
                 'Import error loading {}: {}'.format(file_path, import_error)
             )
