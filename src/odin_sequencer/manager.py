@@ -10,8 +10,13 @@ Tim Nicholls, UKRI STFC Detector Systems Software Group.
 import importlib.util
 import inspect
 from pathlib import Path
+import sys
 
 from .exceptions import CommandSequenceError
+
+if sys.version_info < (3, 6, 0):  # pragma: no cover
+    class ModuleNotFoundError(ImportError):
+        """Derive ModuleNotFoundError exception for earlier python versions."""
 
 
 class CommandSequenceManager():
