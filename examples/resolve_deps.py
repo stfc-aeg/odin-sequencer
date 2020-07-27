@@ -1,11 +1,11 @@
-import os
 from odin_sequencer import CommandSequenceManager
+from pathlib import Path
 
 def main():
 
-    seq_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dependencies')
+    seq_dir = Path(__file__).resolve().parent.joinpath('dependencies')
 
-    seq_file_list = [os.path.normpath(os.path.join(seq_dir, seq_file)) for seq_file in [
+    seq_file_list = [seq_dir.joinpath(seq_file) for seq_file in [
         './a.py', './b.py', './c.py', './d.py', './e.py'
     ]]
     

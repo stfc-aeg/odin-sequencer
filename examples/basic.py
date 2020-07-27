@@ -1,5 +1,5 @@
-import os
 import odin_sequencer
+from pathlib import Path
 
 class TestDevice():
 
@@ -16,9 +16,9 @@ class TestDevice():
 
 def main():
 
-    seq_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sequences')
+    seq_dir = Path(__file__).resolve().parent.joinpath('sequences')
 
-    seq_file_list  = [os.path.normpath(os.path.join(seq_dir, seq_file)) for seq_file in [
+    seq_file_list  = [seq_dir.joinpath(seq_file) for seq_file in [
         './spi_commands.py', './example_sequences.py'
     ]]
 
