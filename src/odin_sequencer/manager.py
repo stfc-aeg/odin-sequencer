@@ -1,7 +1,7 @@
 """Command sequence manager for ODIN control systems.
 
 This module implements a command sequence manager for ODIN-based control systems. This allows
-python scripts to be interactively loaded onto demand, resolve and dependencies betweem them
+python scripts to be interactively loaded onto demand, resolve and dependencies between them
 and make scripts functions available for use in a control system.
 
 Tim Nicholls, UKRI STFC Detector Systems Software Group.
@@ -9,7 +9,6 @@ Tim Nicholls, UKRI STFC Detector Systems Software Group.
 
 import importlib.util
 import inspect
-from pathlib import Path
 import sys
 
 from .exceptions import CommandSequenceError
@@ -19,22 +18,19 @@ if sys.version_info < (3, 6, 0):  # pragma: no cover
         """Derive ModuleNotFoundError exception for earlier python versions."""
 
 
-class CommandSequenceManager():
+class CommandSequenceManager:
     """
     Command sequencer manager class.
 
     The class implements a command sequencer manager, which allows one or more command
-    sequence modules, i.e. script filess to be dynmically loaded and have their functions exposed
+    sequence modules, i.e. script files to be dynamically loaded and have their functions exposed
     to be executed as scripts.
     """
 
-    def __init__(self, file_or_files=None):
+    def __init__(self):
         """Initialise the command sequence manager.
 
-        This method initialises the manager, optionally loading one or more command sequence
-        module files as specified and resolving them for use.
-
-        :param file_or_files: (list) file names(s) to load
+        This method initialises the manager.
         """
         # Initialise empty data structures
         self.modules = {}
@@ -42,85 +38,107 @@ class CommandSequenceManager():
         self.provides = {}
         self.context = {}
 
-        # If one or more files have been specified, attempt to load and resolve them
-        if file_or_files:
+    def load_module(self, paths, resolve=True):
+        """Load sequence module files into the manager.
 
-            if not isinstance(file_or_files, list):
-                file_or_files = [file_or_files]
+        This method attempts to load the specified module file(s) into the manager, determine
+        their required dependencies and what sequence functions they provide. If specified, the
+        manager will then attempt to resolve all dependencies and make modules available. All
+        module files in a directory are loaded if a path to a directory is specified.
 
-            for file in file_or_files:
-                self.load_module(file, resolve=False)
-
-            self.resolve()
-
-    def load_module(self, file_path, resolve=True):
-        """Load a sequence module file into the manager.
-
-        This method attempts loads the specified module file into the manager, determine
-        its required dependencie and what sequence functions it provides. If specified, the
-        manager will then attempt to resolve all dependencies and make modules available.
-
-        :param file_path: name of file path to load
+        :param paths: names of file and directory paths to load 
         :param resolve: resolve loaded modules if True (default true)
         """
-        # Get the module name from the stem of the file
-        module_name = Path(file_path).stem
 
-        # Create a module specification and attempt to load the module
-        spec = importlib.util.spec_from_file_location(module_name, file_path)
-        module = importlib.util.module_from_spec(spec)
-        try:
-            spec.loader.exec_module(module)
-        except SyntaxError as import_error:
-            raise CommandSequenceError(
-                'Syntax error loading {}: {}'.format(file_path, import_error)
-            )
-        except (ModuleNotFoundError, ImportError) as import_error:
-            raise CommandSequenceError(
-                'Import error loading {}: {}'.format(file_path, import_error)
-            )
-        except FileNotFoundError:
-            raise CommandSequenceError(
-                'Sequence module file {} not found'.format(file_path)
-            )
+        file_paths = []
 
-        # If the module declares which sequence functions it provides, use that, otherwise assume
-        # that all functions are to be made available
-        if hasattr(module, 'provides'):
-            provides = module.provides
-        else:
-            provides = [name for name, _ in inspect.getmembers(module, inspect.isfunction)]
+        for path in paths:
+            if path.suffix != '.py':
+                # Retrieve and add all module file paths from the specified directory to the list
+                file_paths.extend(self.retrieve_directory_files(path))
+                continue
 
-        # Set the provided functions as attributes of this manager, so they are available
-        # to be used by calling code
-        for seq_name in provides:
+            file_paths.append(path)
+
+        for file_path in file_paths:
+
+            # Get the module name from the stem of the file
+            module_name = file_path.stem
+
+            # Create a module specification and attempt to load the module
+            spec = importlib.util.spec_from_file_location(module_name, file_path)
+            module = importlib.util.module_from_spec(spec)
             try:
-                setattr(self, seq_name, getattr(module, seq_name))
-            except AttributeError:
+                spec.loader.exec_module(module)
+            except SyntaxError as import_error:
                 raise CommandSequenceError(
-                    "{} does not implement {} listed in its provided sequences".format(
-                        module_name, seq_name)
+                    'Syntax error loading {}: {}'.format(file_path, import_error)
+                )
+            except (ModuleNotFoundError, ImportError) as import_error:
+                raise CommandSequenceError(
+                    'Import error loading {}: {}'.format(file_path, import_error)
+                )
+            except FileNotFoundError:
+                raise CommandSequenceError(
+                    'Sequence module file {} not found'.format(file_path)
                 )
 
-        # If the module declares what dependencies it requires, use that, otherwise assume there
-        # are none
-        if hasattr(module, 'requires'):
-            requires = module.requires
-        else:
-            requires = []
+            # If the module declares which sequence functions it provides, use that, otherwise assume
+            # that all functions are to be made available
+            if hasattr(module, 'provides'):
+                provides = module.provides
+            else:
+                provides = [name for name, _ in inspect.getmembers(module, inspect.isfunction)]
 
-        # Set the manager context as an attribute of the module to allow access to external
-        # functionality
-        setattr(module, 'get_context', self._get_context)
+            # Set the provided functions as attributes of this manager, so they are available
+            # to be used by calling code
+            for seq_name in provides:
+                try:
+                    setattr(self, seq_name, getattr(module, seq_name))
+                except AttributeError:
+                    raise CommandSequenceError(
+                        "{} does not implement {} listed in its provided sequences".format(
+                            module_name, seq_name)
+                    )
 
-        # Add the module information to the manager
-        self.modules[module_name] = module
-        self.provides[module_name] = provides
-        self.requires[module_name] = requires
+            # If the module declares what dependencies it requires, use that, otherwise assume there
+            # are none
+            if hasattr(module, 'requires'):
+                requires = module.requires
+            else:
+                requires = []
 
-        # If requested, resolve dependencies for currently loaded modules
-        if resolve:
-            self.resolve()
+            # Set the manager context as an attribute of the module to allow access to external
+            # functionality
+            setattr(module, 'get_context', self._get_context)
+
+            # Add the module information to the manager
+            self.modules[module_name] = module
+            self.provides[module_name] = provides
+            self.requires[module_name] = requires
+
+            # If requested, resolve dependencies for currently loaded modules
+            if resolve:
+                self.resolve()
+
+    def retrieve_directory_files(self, directory_path):
+        """Retrieve paths to all sequence files in a directory.
+
+        This methods retrieves the paths to all the sequence files that are stored
+        in a given directory. If the given directory does not exits, an exception
+        is raised. Once retrieved, the paths are stored and returned as a list.
+
+        :param: name of a directory to retrieve paths to sequence files from
+        :return: a list of paths to all sequence files
+        """
+
+        if not directory_path.exists():
+            # Raise an excpetion if the given directory does not exist
+            raise CommandSequenceError(
+                'Sequence directory {} not found'.format(directory_path)
+            )
+
+        return [file for file in directory_path.glob('*.py')]
 
     def resolve(self):
         """Resolve dependencies for currently loaded modules.
