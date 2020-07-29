@@ -136,7 +136,6 @@ def test_retrieve_directory_files_with_existing_directory(shared_datadir, create
     Test that paths to all sequence files that are stored inside an existing directory
     are retrieved.
     """
-    
     directory_path = shared_datadir.joinpath('context_data')
     manager = CommandSequenceManager()
     file_paths = manager.retrieve_directory_files(directory_path)
@@ -145,7 +144,9 @@ def test_retrieve_directory_files_with_existing_directory(shared_datadir, create
     assert len(file_paths) == num_modules_in_dir
 
 def test_retrieve_directory_files_missing_directory(shared_datadir, create_paths):
-
+    """
+    Test that retrieving module files from a missing directory raises an error appropriately.
+    """
     directory_path = shared_datadir.joinpath('missing_directory')
 
     with pytest.raises(CommandSequenceError,
@@ -158,7 +159,6 @@ def test_manager_multiple_files(create_paths):
     """
     Test that multiple module files can be loaded into the the sequence manager.
     """
-
     files = ['basic_sequences.py', 'no_provide.py']
     manager = CommandSequenceManager()
     paths = create_paths(files)
@@ -183,7 +183,7 @@ def test_sequence_no_provide(create_paths):
 
 def test_sequence_mismatched_provide(create_paths):
     """
-    Thest that loading a sequence file with a mismatched provide statement raises
+    Test that loading a sequence file with a mismatched provide statement raises
     the appropriate exception.
     """
     file_stem = 'provide_mismatch'
