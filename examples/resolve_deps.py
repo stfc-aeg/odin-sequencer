@@ -3,13 +3,15 @@ from pathlib import Path
 
 def main():
 
-    seq_dir = Path(__file__).resolve().parent.joinpath('dependencies')
+    examples_dir = Path(__file__).resolve().parent
 
-    seq_file_list = [seq_dir.joinpath(seq_file) for seq_file in [
-        './a.py', './b.py', './c.py', './d.py', './e.py'
+    paths = [examples_dir.joinpath(seq_file) for seq_file in [
+        'dependencies/a.py', 'dependencies/b.py', 'dependencies/c.py', 'dependencies/d.py', 'dependencies/e.py'
     ]]
     
-    csm = CommandSequenceManager(seq_file_list)
+    csm = CommandSequenceManager()
+    csm.load_module(paths, False)
+    csm.resolve()
 
     csm.a_one()
     csm.a_two()

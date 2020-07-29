@@ -16,13 +16,15 @@ class TestDevice():
 
 def main():
 
-    seq_dir = Path(__file__).resolve().parent.joinpath('sequences')
+    examples_dir = Path(__file__).resolve().parent
 
-    seq_file_list  = [seq_dir.joinpath(seq_file) for seq_file in [
-        './spi_commands.py', './example_sequences.py'
+    paths = [examples_dir.joinpath(seq_file) for seq_file in [
+        'sequences/spi_commands.py', 'sequences/example_sequences.py'
     ]]
 
-    csm = odin_sequencer.CommandSequenceManager(seq_file_list)
+    csm = odin_sequencer.CommandSequenceManager()
+    csm.load_module(paths, False)
+    csm.resolve()
 
     test_device = TestDevice(123)
     csm.add_context('test_device', test_device)
