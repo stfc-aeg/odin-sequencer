@@ -99,6 +99,61 @@ def test_load_missing_module(create_paths):
         paths = create_paths([file_name])
         manager.load_module(paths)
 
+def test_load_module_with_directory_path(shared_datadir, create_paths):
+    """
+    Test that all sequence module files in a specified directory are loaded into the manager.
+    """
+    directory = 'context_data'
+    manager = CommandSequenceManager()
+    paths = create_paths([directory])
+    manager.load_module(paths, False)
+    manager.resolve()
+
+    num_modules_in_dir = len(list(shared_datadir.joinpath(directory).glob('*.py')))
+    assert len(manager.modules) == num_modules_in_dir
+    assert len(manager.provides) == num_modules_in_dir
+    assert len(manager.requires) == num_modules_in_dir
+
+def test_load_module_with_file_and_directory_paths(shared_datadir, create_paths):
+    """
+    Test that all specified module files and all module files inside a specified directory
+    are loaded into the manager.
+    """
+    files = ['basic_sequences.py', 'with_requires.py']
+    directory = 'context_data'
+    manager = CommandSequenceManager()
+    paths = create_paths(files + [directory])
+    manager.load_module(paths, False)
+    manager.resolve()
+
+    num_modules_in_dir = len(list(shared_datadir.joinpath(directory).glob('*.py')))
+    assert len(manager.modules) == len(files) + num_modules_in_dir
+    assert len(manager.provides) == len(files) + num_modules_in_dir
+    assert len(manager.requires) == len(files) + num_modules_in_dir
+
+def test_retrieve_directory_files_with_existing_directory(shared_datadir, create_paths):
+    """
+    Test that paths to all sequence files that are stored inside an existing directory
+    are retrieved.
+    """
+    
+    directory_path = shared_datadir.joinpath('context_data')
+    manager = CommandSequenceManager()
+    file_paths = manager.retrieve_directory_files(directory_path)
+
+    num_modules_in_dir = len(list(directory_path.glob('*.py')))
+    assert len(file_paths) == num_modules_in_dir
+
+def test_retrieve_directory_files_missing_directory(shared_datadir, create_paths):
+
+    directory_path = shared_datadir.joinpath('missing_directory')
+
+    with pytest.raises(CommandSequenceError,
+        match='Sequence directory {} not found'.format(directory_path)
+    ):
+        manager = CommandSequenceManager()
+        manager.retrieve_directory_files(directory_path)
+
 def test_manager_multiple_files(create_paths):
     """
     Test that multiple module files can be loaded into the the sequence manager.
