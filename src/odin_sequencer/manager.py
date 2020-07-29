@@ -53,6 +53,7 @@ class CommandSequenceManager:
         file_paths = []
 
         for path in paths:
+            # Determines if path points to a directory
             if path.suffix != '.py':
                 # Retrieve and add all module file paths from the specified directory to the list
                 file_paths.extend(self.retrieve_directory_files(path))
