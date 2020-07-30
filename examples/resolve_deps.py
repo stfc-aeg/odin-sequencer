@@ -9,9 +9,7 @@ def main():
         'dependencies/a.py', 'dependencies/b.py', 'dependencies/c.py', 'dependencies/d.py', 'dependencies/e.py'
     ]]
     
-    csm = CommandSequenceManager()
-    csm.load_module(paths, False)
-    csm.resolve()
+    csm = CommandSequenceManager(paths)
 
     csm.a_one()
     csm.a_two()
