@@ -27,10 +27,13 @@ class CommandSequenceManager:
     to be executed as scripts.
     """
 
-    def __init__(self):
+    def __init__(self, path_or_paths=None):
         """Initialise the command sequence manager.
 
-        This method initialises the manager.
+        This method initialises the manager, optionally loading one or more command sequence
+        module files as specified and resolving them for use.
+
+        :param path_or_paths: path(s) to file module(s) to load
         """
         # Initialise empty data structures
         self.modules = {}
@@ -38,7 +41,16 @@ class CommandSequenceManager:
         self.provides = {}
         self.context = {}
 
-    def load_module(self, paths, resolve=True):
+        # If one or more files have been specified, attempt to load and resolve them
+        if path_or_paths:
+
+            if not isinstance(path_or_paths, list):
+                path_or_paths = [path_or_paths]
+
+            self.load(path_or_paths, False)
+            self.resolve()
+
+    def load(self, path_or_paths, resolve=True):
         """Load sequence module files into the manager.
 
         This method attempts to load the specified module file(s) into the manager, determine
@@ -50,13 +62,16 @@ class CommandSequenceManager:
         :param resolve: resolve loaded modules if True (default true)
         """
 
+        if not isinstance(path_or_paths, list):
+            path_or_paths = [path_or_paths]
+
         file_paths = []
 
-        for path in paths:
+        for path in path_or_paths:
             # Determines if path points to a directory
             if path.suffix != '.py':
                 # Retrieve and add all module file paths from the specified directory to the list
-                file_paths.extend(self.retrieve_directory_files(path))
+                file_paths.extend(self._retrieve_directory_files(path))
                 continue
 
             file_paths.append(path)
@@ -122,7 +137,7 @@ class CommandSequenceManager:
             if resolve:
                 self.resolve()
 
-    def retrieve_directory_files(self, directory_path):
+    def _retrieve_directory_files(self, directory_path):
         """Retrieve paths to all sequence files in a directory.
 
         This methods retrieves the paths to all the sequence files that are stored
