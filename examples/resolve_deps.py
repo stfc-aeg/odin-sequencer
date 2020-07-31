@@ -1,5 +1,6 @@
 from odin_sequencer import CommandSequenceManager
 from pathlib import Path
+import time
 
 def main():
 
@@ -10,6 +11,11 @@ def main():
     ]]
     
     csm = CommandSequenceManager(paths)
+
+    print('sleeping')
+    time.sleep(5) # Manually modify module code of a_three function while program is sleeping 
+
+    csm.reload() # Reload all modules
 
     csm.a_one()
     csm.a_two()

@@ -40,6 +40,7 @@ class CommandSequenceManager:
         self.requires = {}
         self.provides = {}
         self.context = {}
+        self.specs = {}
 
         # If one or more files have been specified, attempt to load and resolve them
         if path_or_paths:
@@ -132,10 +133,21 @@ class CommandSequenceManager:
             self.modules[module_name] = module
             self.provides[module_name] = provides
             self.requires[module_name] = requires
+            sys.modules[module_name] = module # This must be done as an ImportError will be thrown saying that the module cannot be found in sys.modules
+            self.specs[module_name] = spec # The _bootstrap._exec takes module and spec as its parameters so specs must be stored beforehand
 
             # If requested, resolve dependencies for currently loaded modules
             if resolve:
                 self.resolve()
+
+    def reload(self):
+
+        for module in self.modules:
+            #self.modules[module] = importlib.reload(self.modules[module])
+            # The above line is how importlib recommends reloading module but it throws a ModuleNotFoundError saying that spec cannot be found for the given module
+
+            self.modules[module] = importlib._bootstrap._exec(self.specs[module], self.modules[module])
+            # The above does not result in any errors, however changes to code in modules are not detected 
 
     def _retrieve_directory_files(self, directory_path):
         """Retrieve paths to all sequence files in a directory.
