@@ -7,8 +7,8 @@ def test_sequence(a_val:int=123, b:str='hello'):
 
     dev = get_context('test_device')
 
-    spi_read(8)
-    spi_write([0x34])
+    spi_read(8) #part of spi_commands.py
+    spi_write([0x34]) # part of spi_commands.py
     #load_dacs()
     #calibrate()
 
