@@ -10,6 +10,7 @@ Tim Nicholls, UKRI STFC Detector Systems Software Group.
 import importlib.util
 import inspect
 import sys
+from pathlib import Path
 
 from .exceptions import CommandSequenceError
 
@@ -40,7 +41,7 @@ class CommandSequenceManager:
         self.requires = {}
         self.provides = {}
         self.context = {}
-        self.specs = {}
+        self.file_paths = {}
 
         # If one or more files have been specified, attempt to load and resolve them
         if path_or_paths:
@@ -69,6 +70,10 @@ class CommandSequenceManager:
         file_paths = []
 
         for path in path_or_paths:
+
+            if not isinstance(path, Path):
+                path = Path(path)
+
             # Determines if path points to a directory
             if path.suffix != '.py':
                 # Retrieve and add all module file paths from the specified directory to the list
@@ -133,21 +138,19 @@ class CommandSequenceManager:
             self.modules[module_name] = module
             self.provides[module_name] = provides
             self.requires[module_name] = requires
-            sys.modules[module_name] = module # This must be done as an ImportError will be thrown saying that the module cannot be found in sys.modules
-            self.specs[module_name] = spec # The _bootstrap._exec takes module and spec as its parameters so specs must be stored beforehand
+            self.file_paths[module_name] = file_path
 
-            # If requested, resolve dependencies for currently loaded modules
-            if resolve:
-                self.resolve()
+        # If requested, resolve dependencies for currently loaded modules
+        if resolve:
+            self.resolve()
 
-    def reload(self):
+    def reload(self, resolve=True):
 
-        for module in self.modules:
-            #self.modules[module] = importlib.reload(self.modules[module])
-            # The above line is how importlib recommends reloading module but it throws a ModuleNotFoundError saying that spec cannot be found for the given module
+        module_names = [name for name in self.modules]
+        for name in module_names:
+            del(self.modules[name])
 
-            self.modules[module] = importlib._bootstrap._exec(self.specs[module], self.modules[module])
-            # The above does not result in any errors, however changes to code in modules are not detected 
+        self.load(list(self.file_paths.values()), resolve)
 
     def _retrieve_directory_files(self, directory_path):
         """Retrieve paths to all sequence files in a directory.
