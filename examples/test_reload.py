@@ -15,9 +15,9 @@ def main():
 
     csm.a_three(9.876)
 
-    input("Hit return")
+    input("Modify a_three function inside a.py and then hit return")
 
-    csm.reload()
+    csm.reload(examples_dir.joinpath('dependencies/a.py'))
 
     csm.a_three(5.678)
     csm.execute('a_three', 1.234, wibble='wobble')

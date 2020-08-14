@@ -60,7 +60,7 @@ class CommandSequenceManager:
         manager will then attempt to resolve all dependencies and make modules available. All
         module files in a directory are loaded if a path to a directory is specified.
 
-        :param paths: names of file and directory paths to load 
+        :param path_or_paths: names of file and directory paths to load 
         :param resolve: resolve loaded modules if True (default true)
         """
 
@@ -144,13 +144,37 @@ class CommandSequenceManager:
         if resolve:
             self.resolve()
 
-    def reload(self, resolve=True):
+    def reload(self, file_paths=None, resolve=True):
+        """Reload currently loaded modules.
+        
+        This method attempts to reload all or specific sequence modules currently loaded
+        into the manager. It does this by manually unloading all sequence modules and then
+        loading them again and resolving their dependencies. 
 
-        module_names = [name for name in self.modules]
+        :param file_paths: path(s) to sequence module file(s) that require loading (default: None) 
+        :param resolve: resolve loaded modules if True (default true)
+        """
+
+        if file_paths:
+            if not isinstance(file_paths, list):
+                file_paths = [file_paths]
+
+            for i in range(len(file_paths)):
+                file_path = file_paths[i]
+                if not isinstance(file_path, Path):
+                    file_paths[i] = Path(file_path)
+
+            module_names = [name.stem for name in file_paths]
+
+        else:
+            file_paths = list(self.file_paths.values())
+            module_names = [name for name in self.modules]
+
+        # Unload the modules by deleting them
         for name in module_names:
             del(self.modules[name])
 
-        self.load(list(self.file_paths.values()), resolve)
+        self.load(file_paths, resolve)
 
     def _retrieve_directory_files(self, directory_path):
         """Retrieve paths to all sequence files in a directory.
