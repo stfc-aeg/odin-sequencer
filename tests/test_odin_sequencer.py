@@ -3,6 +3,7 @@
 """Tests for odin_sequencer package."""
 
 import pytest
+import time
 
 from odin_sequencer import CommandSequenceManager, CommandSequenceError
 
@@ -145,6 +146,33 @@ def test_load_with_missing_directory(shared_datadir, make_seq_manager, create_pa
         match='Sequence directory {} not found'.format(directory_path)
     ):
         make_seq_manager(directory_path)
+
+def test_reload_with_module_name(shared_datadir, make_seq_manager, create_paths):
+    file_path = shared_datadir.joinpath('test_reload.py')
+
+    file_path.write_text("""provides = ['get_message']
+print("one")
+def get_message():
+    return 'World Hello'""")
+
+    manager = make_seq_manager('test_reload.py')
+
+    with open(file_path, 'w') as fp:
+        fp.write("""provides = ['get_message']
+print("two")
+def get_message():
+    return 'Hello World'""")
+
+    with open(file_path, 'r') as fp:
+        print(fp.read())
+
+    del(manager.get_message)
+
+    manager.reload(module_names='test_reload')
+
+    message = manager.get_message()
+
+    assert message == 'Hello World'
 
 def test_explicit_module_load(make_seq_manager, create_paths):
     """
