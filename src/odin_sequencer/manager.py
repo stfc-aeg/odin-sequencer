@@ -8,6 +8,7 @@ Tim Nicholls, UKRI STFC Detector Systems Software Group.
 """
 
 import importlib.util
+from importlib import invalidate_caches
 import inspect
 import sys
 from pathlib import Path
@@ -45,10 +46,6 @@ class CommandSequenceManager:
 
         # If one or more files have been specified, attempt to load and resolve them
         if path_or_paths:
-
-            if not isinstance(path_or_paths, list):
-                path_or_paths = [path_or_paths]
-
             self.load(path_or_paths, False)
             self.resolve()
 
@@ -60,7 +57,7 @@ class CommandSequenceManager:
         manager will then attempt to resolve all dependencies and make modules available. All
         module files in a directory are loaded if a path to a directory is specified.
 
-        :param path_or_paths: names of file and directory paths to load 
+        :param path_or_paths: names of file and directory paths to load. These can be of type String or Path.
         :param resolve: resolve loaded modules if True (default true)
         """
 
@@ -144,15 +141,16 @@ class CommandSequenceManager:
         if resolve:
             self.resolve()
 
-    def reload(self, file_paths=None, resolve=True):
+    def reload(self, file_paths=None, module_names=None, resolve=True):
         """Reload currently loaded modules.
         
         This method attempts to reload all or specific sequence modules currently loaded
         into the manager. It does this by manually unloading all sequence modules and then
         loading them again and resolving their dependencies. 
 
-        :param file_paths: path(s) to sequence module file(s) that require loading (default: None) 
-        :param resolve: resolve loaded modules if True (default true)
+        :param module_names: module name(s) that require reloading (default: None)
+        :param file_paths: path(s) to sequence module file(s) that require reloading (default: None) 
+        :param resolve: resolve loaded modules if True (default: true)
         """
 
         if file_paths:
@@ -161,30 +159,66 @@ class CommandSequenceManager:
 
             for i in range(len(file_paths)):
                 file_path = file_paths[i]
+
                 if not isinstance(file_path, Path):
-                    file_paths[i] = Path(file_path)
+                    file_path = Path(file_path)
 
-            module_names = [name.stem for name in file_paths]
+                if file_path.stem not in self.modules:
+                    raise CommandSequenceError(
+                        'Cannot reload file {} as it is not loaded into the manager'.format(file_path)
+                    )
 
-        else:
+                file_paths[i] = file_path
+
+        if module_names:
+            if not isinstance(module_names, list):
+                module_names = [module_names]
+
+            for module_name in module_names:
+                if module_name not in self.modules: 
+                    raise CommandSequenceError(
+                        'Cannot reload module {} as it is not loaded into the manager'.format(module_name)
+                    )
+
+                if file_paths is None:
+                    file_paths = []
+
+                file_paths.append(self.file_paths[module_name])
+            
+        if module_names is None and file_paths is None:
             file_paths = list(self.file_paths.values())
-            module_names = [name for name in self.modules]
 
-        # Unload the modules by deleting them
-        for name in module_names:
-            del(self.modules[name])
+        self._unload([file_path.stem for file_path in file_paths])
+
+        for file_path in file_paths:
+            print(str(file_path))
+            print("-----")
+            with open(file_path, 'r') as fp:
+                print(fp.read())
 
         self.load(file_paths, resolve)
+
+    def _unload(self, module_names):
+        """ This method unloads the specified modules by deleting them from the manager.
+
+        :param: module_names: loaded modules that require unloading
+        """
+        
+        invalidate_caches()
+        for name in module_names:
+            print("Unloading " + name)
+            del(self.modules[name])
+            del(self.file_paths[name])
 
     def _retrieve_directory_files(self, directory_path):
         """Retrieve paths to all sequence files in a directory.
 
-        This methods retrieves the paths to all the sequence files that are stored
+        This method retrieves the paths to all the sequence files that are stored
         in a given directory. If the given directory does not exits, an exception
         is raised. Once retrieved, the paths are stored and returned as a list.
 
-        :param: name of a directory to retrieve paths to sequence files from
-        :return: a list of paths to all sequence files
+        :param directory_path: path to directory from which to retrieve paths to sequence files
+        :return: a list of Path objects to all sequence files
         """
 
         if not directory_path.exists():
