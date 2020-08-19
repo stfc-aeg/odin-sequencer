@@ -8,8 +8,11 @@ Tim Nicholls, UKRI STFC Detector Systems Software Group.
 """
 
 import importlib.util
+from importlib import invalidate_caches
 import inspect
 import sys
+from pathlib import Path
+import os
 
 from .exceptions import CommandSequenceError
 
@@ -40,13 +43,10 @@ class CommandSequenceManager:
         self.requires = {}
         self.provides = {}
         self.context = {}
+        self.file_paths = {}
 
         # If one or more files have been specified, attempt to load and resolve them
         if path_or_paths:
-
-            if not isinstance(path_or_paths, list):
-                path_or_paths = [path_or_paths]
-
             self.load(path_or_paths, False)
             self.resolve()
 
@@ -58,7 +58,7 @@ class CommandSequenceManager:
         manager will then attempt to resolve all dependencies and make modules available. All
         module files in a directory are loaded if a path to a directory is specified.
 
-        :param paths: names of file and directory paths to load 
+        :param path_or_paths: names of file and directory paths to load. These can be of type String or Path.
         :param resolve: resolve loaded modules if True (default true)
         """
 
@@ -68,6 +68,10 @@ class CommandSequenceManager:
         file_paths = []
 
         for path in path_or_paths:
+
+            if not isinstance(path, Path):
+                path = Path(path)
+
             # Determines if path points to a directory
             if path.suffix != '.py':
                 # Retrieve and add all module file paths from the specified directory to the list
@@ -132,20 +136,89 @@ class CommandSequenceManager:
             self.modules[module_name] = module
             self.provides[module_name] = provides
             self.requires[module_name] = requires
+            self.file_paths[module_name] = file_path
 
-            # If requested, resolve dependencies for currently loaded modules
-            if resolve:
-                self.resolve()
+        # If requested, resolve dependencies for currently loaded modules
+        if resolve:
+            self.resolve()
+
+    def reload(self, file_paths=None, module_names=None, resolve=True):
+        """Reload currently loaded modules.
+        
+        This method attempts to reload all or specific sequence modules currently loaded
+        into the manager. It does this by manually unloading all sequence modules and then
+        loading them again and resolving their dependencies. 
+
+        :param module_names: module name(s) that require reloading (default: None)
+        :param file_paths: path(s) to sequence module file(s) that require reloading (default: None) 
+        :param resolve: resolve loaded modules if True (default: true)
+        """
+
+        if file_paths:
+            if not isinstance(file_paths, list):
+                file_paths = [file_paths]
+
+            for i in range(len(file_paths)):
+                file_path = file_paths[i]
+
+                if not isinstance(file_path, Path):
+                    file_path = Path(file_path)
+
+                if file_path.stem not in self.modules:
+                    raise CommandSequenceError(
+                        'Cannot reload file {} as it is not loaded into the manager'.format(file_path)
+                    )
+
+                file_paths[i] = file_path
+
+        if module_names:
+            if not isinstance(module_names, list):
+                module_names = [module_names]
+
+            for module_name in module_names:
+                if module_name not in self.modules: 
+                    raise CommandSequenceError(
+                        'Cannot reload module {} as it is not loaded into the manager'.format(module_name)
+                    )
+
+                if file_paths is None:
+                    file_paths = []
+
+                file_paths.append(self.file_paths[module_name])
+            
+        if module_names is None and file_paths is None:
+            file_paths = list(self.file_paths.values())
+
+        self._unload([file_path.stem for file_path in file_paths])
+
+        self.load(file_paths, resolve)
+
+    def _unload(self, module_names):
+        """ This method unloads the specified modules by deleting them from the manager.
+
+        :param: module_names: loaded modules that require unloading
+        """
+
+        for name in module_names:
+            try:
+                # The byte-compiled file associated to the module must be deleted
+                # to ensure that the modified version of the module file is loaded
+                os.remove(importlib.util.cache_from_source(self.file_paths[name]))
+            except (FileNotFoundError, OSError):
+                pass
+            
+            del(self.modules[name])
+            del(self.file_paths[name])
 
     def _retrieve_directory_files(self, directory_path):
         """Retrieve paths to all sequence files in a directory.
 
-        This methods retrieves the paths to all the sequence files that are stored
+        This method retrieves the paths to all the sequence files that are stored
         in a given directory. If the given directory does not exits, an exception
         is raised. Once retrieved, the paths are stored and returned as a list.
 
-        :param: name of a directory to retrieve paths to sequence files from
-        :return: a list of paths to all sequence files
+        :param directory_path: path to directory from which to retrieve paths to sequence files
+        :return: a list of Path objects to all sequence files
         """
 
         if not directory_path.exists():
