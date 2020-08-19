@@ -201,9 +201,12 @@ class CommandSequenceManager:
 
         for name in module_names:
             try:
+                # The byte-compiled file associated to the module must be deleted
+                # to ensure that the modified version of the module file is loaded
                 os.remove(importlib.util.cache_from_source(self.file_paths[name]))
-            except FileNotFoundError:
+            except (FileNotFoundError, OSError):
                 pass
+            
             del(self.modules[name])
             del(self.file_paths[name])
 
