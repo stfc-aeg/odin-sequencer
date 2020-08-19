@@ -12,6 +12,7 @@ from importlib import invalidate_caches
 import inspect
 import sys
 from pathlib import Path
+import os
 
 from .exceptions import CommandSequenceError
 
@@ -190,12 +191,6 @@ class CommandSequenceManager:
 
         self._unload([file_path.stem for file_path in file_paths])
 
-        for file_path in file_paths:
-            print(str(file_path))
-            print("-----")
-            with open(file_path, 'r') as fp:
-                print(fp.read())
-
         self.load(file_paths, resolve)
 
     def _unload(self, module_names):
@@ -203,10 +198,12 @@ class CommandSequenceManager:
 
         :param: module_names: loaded modules that require unloading
         """
-        
-        invalidate_caches()
+
         for name in module_names:
-            print("Unloading " + name)
+            try:
+                os.remove(importlib.util.cache_from_source(self.file_paths[name]))
+            except FileNotFoundError:
+                pass
             del(self.modules[name])
             del(self.file_paths[name])
 
