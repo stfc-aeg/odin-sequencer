@@ -3,6 +3,9 @@
 """Tests for odin_sequencer package."""
 
 import pytest
+import importlib.util
+from importlib import invalidate_caches
+import os
 
 from odin_sequencer import CommandSequenceManager, CommandSequenceError
 
@@ -183,6 +186,16 @@ def test_load_with_missing_directory(shared_datadir, make_seq_manager, create_pa
     ):
         make_seq_manager(directory_path)
 
+def test_explicit_module_load(make_seq_manager, create_paths):
+    """
+    Test that a module file is loaded into the manager when the load function
+    is explicitly called.
+    """
+    manager = make_seq_manager()
+    manager.load(str(create_paths('basic_sequences.py')))
+
+    assert len(manager.modules) == 1
+
 def test_reload_with_module_name(shared_datadir, make_seq_manager, create_paths, create_tmp_module_files):
     """
     Test that a specific loaded module is successfully reloaded when its module name
@@ -284,15 +297,23 @@ def test_reload_with_not_loaded_module_name(make_seq_manager, create_paths):
     ):
         manager.reload(module_names=module) 
 
-def test_explicit_module_load(make_seq_manager, create_paths):
+def test_reload_when_byte_compiled_file_of_module_is_deleted(shared_datadir, make_seq_manager, create_paths, create_tmp_module_files):
     """
-    Test that a module file is loaded into the manager when the load function
-    is explicitly called.
+    Test that program does not break if the byte-compiled file of a specific module is
+    deleted before the module is reloaded.
     """
-    manager = make_seq_manager()
-    manager.load(create_paths('basic_sequences.py'))
 
-    assert len(manager.modules) == 1
+    tmp_files = create_tmp_module_files
+    module = tmp_files[0]
+    manager = make_seq_manager(tmp_files)
+
+    _modify_test_reload_module_file(shared_datadir)
+
+    os.remove(importlib.util.cache_from_source(module))
+    manager.reload(file_paths=str(module))
+    message = manager.generate_message()
+
+    assert message == 'Message: Hello World'
 
 def test_manager_multiple_files(make_seq_manager, create_paths):
     """
