@@ -54,6 +54,43 @@ def context_object():
 
     return ContextObject(255374)
 
+@pytest.fixture
+def create_tmp_module_files(shared_datadir):
+    """
+    Test fixture for creating temporary module files that can be used to test the reload
+    mechanism of the sequence manager.
+    """
+
+    test_reload_module = shared_datadir.joinpath('test_reload.py')
+    test_reload_module.write_text("""provides = ['get_message']
+def get_message():
+    return 'World Hello'""")
+
+    with_dependency_module = shared_datadir.joinpath('with_dependency.py')
+    with_dependency_module.write_text("""requires = ['test_reload']
+provides = ['generate_message']
+
+def generate_message():
+    return 'Message: ' + get_message()""")
+
+    return [test_reload_module, with_dependency_module]
+
+def _modify_test_reload_module_file(shared_datadir):
+    module = shared_datadir.joinpath('test_reload.py')
+
+    module.write_text("""provides = ['get_message']
+def get_message():
+    return 'Hello World'""")
+
+def _modify_with_dependency_module_file(shared_datadir):
+    module = shared_datadir.joinpath('with_dependency.py')
+
+    module.write_text("""requires = ['test_reload']
+provides = ['generate_message']
+
+def generate_message():
+    return 'Message: ' + get_message() + ' - ' + get_message()""")
+
 def test_empty_manager(make_seq_manager, create_paths):
     """Test that a command sequence manager initialsed without any sequence files is empty."""
     manager = make_seq_manager()
@@ -146,23 +183,106 @@ def test_load_with_missing_directory(shared_datadir, make_seq_manager, create_pa
     ):
         make_seq_manager(directory_path)
 
-def test_reload_with_module_name(shared_datadir, make_seq_manager, create_paths):
-    file_path = shared_datadir.joinpath('test_reload.py')
+def test_reload_with_module_name(shared_datadir, make_seq_manager, create_paths, create_tmp_module_files):
+    """
+    Test that a specific loaded module is successfully reloaded when its module name
+    is provided to the reload function.
+    """
+    tmp_files = create_tmp_module_files
+    module = tmp_files[0]
+    manager = make_seq_manager(tmp_files)
 
-    file_path.write_text("""provides = ['get_message']
-def get_message():
-    return 'World Hello'""")
+    _modify_test_reload_module_file(shared_datadir)
+    manager.reload(module_names=module.stem)
+    message = manager.generate_message()
 
-    manager = make_seq_manager('test_reload.py')
+    assert message == 'Message: Hello World'
 
-    file_path.write_text("""provides = ['get_message']
-def get_message():
-    return 'Hello World'""")
+def test_reload_with_file_path_object(shared_datadir, make_seq_manager, create_paths, create_tmp_module_files):
+    """
+    Test that a specific loaded module is successfully reloaded when its path (in form
+    of a Path object) is provided to the reload function.
+    """
+    tmp_files = create_tmp_module_files
+    module = tmp_files[0]
+    manager = make_seq_manager(tmp_files)
 
-    manager.reload(module_names='test_reload')
-    message = manager.get_message()
+    _modify_test_reload_module_file(shared_datadir)
+    manager.reload(file_paths=module)
+    message = manager.generate_message()
 
-    assert message == 'Hello World'
+    assert message == 'Message: Hello World'
+
+def test_reload_with_file_path_as_string(shared_datadir, make_seq_manager, create_paths, create_tmp_module_files):
+    """
+    Test that a specific loaded module is successfully reloaded when its path (in form
+    of a String) is provided to the reload function.
+    """
+    tmp_files = create_tmp_module_files
+    module = tmp_files[0]
+    manager = make_seq_manager(tmp_files)
+
+    _modify_test_reload_module_file(shared_datadir)
+    manager.reload(file_paths=str(module))
+    message = manager.generate_message()
+
+    assert message == 'Message: Hello World'
+
+def test_reload_multiple_modules(shared_datadir, make_seq_manager, create_paths, create_tmp_module_files):
+    """
+    Test that specific loaded modules are successfully reloaded when their paths 
+    (in form of Path objects) are provided to the reload function.
+    """
+    tmp_files = create_tmp_module_files
+    manager = make_seq_manager(tmp_files)
+
+    _modify_test_reload_module_file(shared_datadir)
+    _modify_with_dependency_module_file(shared_datadir)
+    manager.reload(file_paths=tmp_files)
+    message = manager.generate_message()
+
+    assert message == 'Message: Hello World - Hello World'
+
+def test_reload_without_module_names_and_file_paths(shared_datadir, make_seq_manager, create_paths, create_tmp_module_files):
+    """
+    Test that all the loaded modules are successfully reloaded when no module names or
+    file paths are provided to the reload function.
+    """
+    tmp_files = create_tmp_module_files
+    manager = make_seq_manager(tmp_files)
+
+    _modify_test_reload_module_file(shared_datadir)
+    _modify_with_dependency_module_file(shared_datadir)
+    manager.reload()
+    message = manager.generate_message()
+
+    assert message == 'Message: Hello World - Hello World'
+
+def test_reload_with_path_to_not_loaded_module(make_seq_manager, create_paths, shared_datadir):
+    """
+    Test that passing a file path, that points to a module that has not been loaded,
+    to the reload function raises the appropriate exception.
+    """
+    module = shared_datadir.joinpath('basic_sequences.py')
+    manager = make_seq_manager()
+
+    with pytest.raises(CommandSequenceError,
+        match='Cannot reload file {} as it is not loaded into the manager'.format(module)
+    ):
+        manager.reload(file_paths=module) 
+
+def test_reload_with_not_loaded_module_name(make_seq_manager, create_paths):
+    """
+    Test that passing a name of a module, that has not been loaded, to the reload 
+    function raises the appropriate exception.
+    """
+    module = 'basic_sequences'
+    manager = make_seq_manager()
+    
+    with pytest.raises(CommandSequenceError,
+        match='Cannot reload module {} as it is not loaded into the manager'.format(module)
+    ):
+        manager.reload(module_names=module) 
 
 def test_explicit_module_load(make_seq_manager, create_paths):
     """
