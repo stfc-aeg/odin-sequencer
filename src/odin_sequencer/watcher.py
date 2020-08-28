@@ -1,7 +1,26 @@
+"""File watchers for ODIN control systems.
+
+This module implements file watchers, which implement the IFileWatcher interface, for
+ODIN-based control systems. It also implements a file watcher factory that is responsible
+for creating file watcher objects. The different file watcher classes allow for file
+modification events to be detected and details about the modified file(s) to be retrieved.
+The InotifyFileWatcher class uses the inotify library to register files for watching and
+wait for notification events. The inotify library is only compatible with linux systems
+and to make sure that file modifications can still be detected on other systems, the
+StandaloneFileWatcher class was implemented. This class does not use any file watching
+libraries but instead compares the times a specific file was last modified.
+"""
+from abc import ABCMeta, abstractmethod
 import threading
 import queue
 import os
-import inotify.adapters
+
+try:
+    import inotify.adapters
+
+    inotify_imported = True
+except (ImportError, OSError):
+    inotify_imported = False
 
 from .exceptions import CommandSequenceError
 
@@ -259,3 +278,45 @@ class StandaloneFileWatcher(IFileWatcher):
 
             if path in self._watched_files:
                 del (self._watched_files[path])
+
+
+class FileWatcherFactory(object):
+    """File watcher class factory.
+
+    The class implements a file watcher factory that is responsible for creating
+    file watcher objects.
+    """
+
+    # The file watcher classes that the factory can use to create objects
+    __file_watcher_classes = {
+        'inotify': InotifyFileWatcher,
+        'standalone': StandaloneFileWatcher
+    }
+
+    @staticmethod
+    def create_file_watcher(name=None, *args, **kwargs):
+        """Create file watcher object.
+
+        This method creates a file watcher object. It has an optional parameter that allows callers
+        to specify the type of file watcher object that they require to be created. Alternatively,
+        if no name is provided, then the factory checks whether the inotify library was imported or
+        not, to decide the type of file watcher object that it needs to create.
+
+        :param name: name of the file watcher to be created (default None)
+        """
+
+        if name:
+            if name == 'inotify' and not inotify_imported:
+                raise CommandSequenceError('The requested file watcher cannot be created because the inotify module '
+                                           'could not be found')
+
+            file_watcher_class = FileWatcherFactory.__file_watcher_classes.get(name.lower(), None)
+        else:
+            if inotify_imported:
+                file_watcher_class = FileWatcherFactory.__file_watcher_classes.get('inotify', None)
+            else:
+                file_watcher_class = FileWatcherFactory.__file_watcher_classes.get('standalone', None)
+
+        if file_watcher_class:
+            return file_watcher_class(*args, **kwargs)
+        raise CommandSequenceError('The requested file watcher cannot be created because it has not been implemented')
