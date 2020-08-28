@@ -5,7 +5,31 @@ import inotify.adapters
 
 from .exceptions import CommandSequenceError
 
-class InotifyFileWatcher:
+
+class IFileWatcher(metaclass=ABCMeta):
+
+    @abstractmethod
+    def __init__(self):
+        pass
+
+    @abstractmethod
+    def run(self):
+        pass
+
+    @abstractmethod
+    def stop(self):
+        pass
+
+    @abstractmethod
+    def add_watch(self, path_or_paths):
+        pass
+
+    @abstractmethod
+    def remove_watch(self, path_or_paths):
+        pass
+
+
+class InotifyFileWatcher(IFileWatcher):
     """File watcher class.
 
     The class implements a file watcher, which allows one or more files to be watched
@@ -126,7 +150,7 @@ class InotifyFileWatcher:
                 self._watched_files.remove(path)
 
 
-class StandaloneFileWatcher:
+class StandaloneFileWatcher(IFileWatcher):
     """File watcher class.
 
     The class implements a file watcher, which allows one or more files to be watched
