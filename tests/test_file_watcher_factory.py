@@ -70,6 +70,8 @@ def test_create_file_watcher_with_standalone_as_name_with_paths(shared_datadir):
     assert len(file_watcher._watched_files) == len(files)
     assert file_watcher._is_watching is True
 
+    file_watcher.stop()
+
 
 def test_create_file_watcher_with_not_implemented_name():
     """
