@@ -4,7 +4,8 @@
 
 Some tests use time.sleep() to ensure that the file watcher, which runs in a separate
 thread, detects and puts details of the modified files into the queue before the
-assertions happen.
+assertions happen. Some tests also disable the auto reloading if it has been enabled
+to ensure that the separate thread on which the file watcher runs is stopped.
 """
 
 import pytest
@@ -238,6 +239,8 @@ def test_explicit_module_load_when_auto_reloading_enabled(make_seq_manager, crea
     assert str(file_paths[0]) in manager._file_watcher._watched_files
     assert str(file_paths[1]) in manager._file_watcher._watched_files
 
+    manager.disable_auto_reload()
+
 
 def test_reload_with_module_name(shared_datadir, make_seq_manager, create_tmp_module_files):
     """
@@ -399,6 +402,8 @@ def test_enable_auto_reload_when_auto_reloading_previously_enabled(shared_datadi
     assert str(basic_sequences_file_path) in manager._file_watcher._watched_files
     assert str(with_requires_file_path) in manager._file_watcher._watched_files
 
+    manager.disable_auto_reload()
+
 
 def test_disable_auto_reload(make_seq_manager, create_tmp_module_files):
     """
@@ -521,6 +526,8 @@ def test_execute_sequence_when_module_is_modified_while_auto_reload_enabled(shar
 
     assert message == 'Message: Hello World'
 
+    manager.disable_auto_reload()
+
 
 def test_execute_sequence_when_modules_are_modified_while_auto_reload_enabled(shared_datadir, make_seq_manager,
                                                                               create_tmp_module_files):
@@ -537,6 +544,8 @@ def test_execute_sequence_when_modules_are_modified_while_auto_reload_enabled(sh
 
     message = manager.execute('generate_message')
     assert message == 'Message: Hello World - Hello World'
+
+    manager.disable_auto_reload()
 
 
 def test_execute_sequence_when_module_is_modified_while_auto_reload_disabled(shared_datadir, make_seq_manager,
@@ -573,6 +582,8 @@ def test_calling_of_attribute_function_when_module_is_modified_while_auto_reload
     message = manager.generate_message()
 
     assert message == 'Message: Hello World'
+
+    manager.disable_auto_reload()
 
 
 def test_calling_of_attribute_function_when_module_is_modified_while_auto_reload_disabled(shared_datadir,
