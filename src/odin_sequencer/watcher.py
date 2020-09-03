@@ -1,16 +1,16 @@
-"""File watchers for ODIN control systems.
+"""File watchers for odin-sequencer.
 
-This module implements file watchers, which implement the IFileWatcher interface, for
-ODIN-based control systems. It also implements a file watcher factory that is responsible
-for creating file watcher objects. The different file watcher classes allow for file
-modification events to be detected and details about the modified file(s) to be retrieved.
-The InotifyFileWatcher class uses the inotify library to register files for watching and
-wait for notification events. The inotify library is only compatible with linux systems
+This module implements odin-sequencer file watchers that implement the IFileWatcher 
+interface. It also implements a file watcher factory that is responsible for creating 
+file watcher objects. The different file watcher classes allow for file modification 
+events to be detected and details about the modified file(s) to be retrieved. The 
+InotifyFileWatcher class uses the inotify library to register files for watching 
+and wait for notification events. The library is only compatible with linux systems
 and to make sure that file modifications can still be detected on other systems, the
 StandaloneFileWatcher class was implemented. This class does not use any file watching
 libraries but instead compares the times a specific file was last modified.
 """
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 import threading
 import queue
 import os
@@ -25,19 +25,47 @@ except (ImportError, OSError):
 from .exceptions import CommandSequenceError
 
 
-class IFileWatcher(metaclass=ABCMeta):
+class IFileWatcher(ABC):
 
     @abstractmethod
     def __init__(self):
-        pass
+        self._watched_files = None
+        self._is_watching = False
+        self._thread = None
 
     @abstractmethod
-    def run(self):
-        pass
+    def run(self, method_to_run):
+        """Run the watching process
+
+        This method creates a thread and starts the watching process by executing 
+        the _run function from the relevant concrete class in the new thread.
+        """
+        if self._is_watching:
+            raise CommandSequenceError(
+                'File watcher has already been started'
+            )
+
+        self._thread = threading.Thread(target=method_to_run)
+        # Daemon must be set to True to ensure that the created
+        # thread stops when the main one is stopped
+        self._thread.daemon = True
+        self._thread.start()
 
     @abstractmethod
     def stop(self):
-        pass
+        """Stop the watching process
+
+        This method stops the watching process by un-registering files
+        from watching and setting self._is_watching to False.
+        """
+        if not self._is_watching:
+            raise CommandSequenceError(
+                'Cannot stop file watcher as it has not been started'
+            )
+
+        self.remove_watch(list(self._watched_files))
+        self._is_watching = False
+        self._thread.join()
 
     @abstractmethod
     def add_watch(self, path_or_paths):
@@ -64,10 +92,9 @@ class InotifyFileWatcher(IFileWatcher):
 
         :param path_or_paths: path(s) to file(s) that require watching (default None)
         """
+        super().__init__()
         self._i = inotify.adapters.Inotify()
         self._watched_files = set()
-        self._thread = None
-        self._is_watching = False
         self.modified_files_queue = queue.Queue()
 
         if path_or_paths:
@@ -75,21 +102,11 @@ class InotifyFileWatcher(IFileWatcher):
             self.run()
 
     def run(self):
-        """Run the watching process
-
-        This method creates a thread and starts the watching process
-        by executing the _run function in the new thread.
         """
-        if self._is_watching:
-            raise CommandSequenceError(
-                'File watcher has already been started'
-            )
-
-        self._thread = threading.Thread(target=self._run)
-        # Daemon must be set to True to ensure that the created
-        # thread stops when the main one is stopped
-        self._thread.daemon = True
-        self._thread.start()
+        This method inherits the logic from the abstract run method that is inside 
+        the abstract IFileWatcher class.
+        """
+        super().run(self._run)
 
     def _run(self):
         """Watch for modification events
@@ -113,19 +130,11 @@ class InotifyFileWatcher(IFileWatcher):
                     self.modified_files_queue.put(path)
 
     def stop(self):
-        """Stop the watching process
-
-        This method stops the watching process by un-registering files
-        from watching and setting self._is_watching to False.
         """
-        if not self._is_watching:
-            raise CommandSequenceError(
-                'Cannot stop file watcher as it has not been started'
-            )
-
-        self.remove_watch(list(self._watched_files))
-        self._is_watching = False
-        self._thread.join()
+        This method inherits the logic from the abstract run method that is inside 
+        the abstract IFileWatcher class.
+        """
+        super().stop()
 
     def add_watch(self, path_or_paths):
         """Register file(s) for watching
@@ -185,9 +194,8 @@ class StandaloneFileWatcher(IFileWatcher):
 
         :param path_or_paths: path(s) to file(s) that require watching (default None)
         """
+        super().__init__()
         self._watched_files = {}
-        self._thread = None
-        self._is_watching = False
         self.modified_files_queue = queue.Queue()
 
         if path_or_paths:
@@ -195,19 +203,11 @@ class StandaloneFileWatcher(IFileWatcher):
             self.run()
 
     def run(self):
-        """Run the watching process
-
-        This method creates a thread and starts the watching process
-        by executing the _run function in the new thread.
         """
-        if self._is_watching:
-            raise CommandSequenceError(
-                'File watcher has already been started'
-            )
-
-        self._thread = threading.Thread(target=self._run)
-        self._thread.daemon = True
-        self._thread.start()
+        This method inherits the logic from the abstract run method that is inside 
+        the abstract IFileWatcher class.
+        """
+        super().run(self._run)
 
     def _run(self):
         """Watch for file modifications
@@ -229,16 +229,11 @@ class StandaloneFileWatcher(IFileWatcher):
                     self._watched_files[path] = modified
 
     def stop(self):
-        if not self._is_watching:
-            raise CommandSequenceError(
-                'Cannot stop file watcher as it has not been started'
-            )
-
-        self.remove_watch(list(self._watched_files))
-        # Daemon must be set to True to ensure that the created
-        # thread stops when the main one is stopped
-        self._is_watching = False
-        self._thread.join()
+        """
+        This method inherits the logic from the abstract run method that is inside 
+        the abstract IFileWatcher class.
+        """
+        super().stop()
 
     def add_watch(self, path_or_paths):
         """Add file(s) for watching
