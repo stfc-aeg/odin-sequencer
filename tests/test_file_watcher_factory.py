@@ -100,10 +100,15 @@ def test_create_file_watcher_without_inotify_imported_and_name():
     Test that a Standalone file watcher is created when no string value
     is provided but the import of the inotify library was not successful.
     """
+    inotify_imported_old_value = watcher.inotify_imported
     watcher.inotify_imported = False
     file_watcher = FileWatcherFactory.create_file_watcher()
 
     assert isinstance(file_watcher, StandaloneFileWatcher)
+
+    # Must set back to original value or otherwise it will be False
+    # in the other test modules despite inotify being imported
+    watcher.inotify_imported = inotify_imported_old_value
 
 
 def test_create_file_watcher_with_inotify_as_name_and_without_inotify_imported():
@@ -111,6 +116,7 @@ def test_create_file_watcher_with_inotify_as_name_and_without_inotify_imported()
     Test that trying to create an Inotify file watcher when the import of
     the inotify library was not successful raises an error appropriately.
     """
+    inotify_imported_old_value = watcher.inotify_imported
     watcher.inotify_imported = False
 
     with pytest.raises(
@@ -118,3 +124,7 @@ def test_create_file_watcher_with_inotify_as_name_and_without_inotify_imported()
                                     'because the inotify module could not be found'
     ):
         FileWatcherFactory.create_file_watcher('inotify')
+
+    # Must set back to original value or otherwise it will be False
+    # in the other test modules despite inotify being imported
+    watcher.inotify_imported = inotify_imported_old_value
