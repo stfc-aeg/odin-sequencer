@@ -2,10 +2,11 @@
 
 """Tests for odin_sequencer package.
 
-Some tests use time.sleep() to ensure that the file watcher, which runs in a separate
-thread, detects and puts details of the modified files into the queue before the
-assertions happen. Some tests also disable the auto reloading if it has been enabled
-to ensure that the separate thread on which the file watcher runs is stopped.
+Some tests use the _was_file_modified or _await_queue_size method to ensure that
+a file was modified or that the file watcher, which runs in a separate thread,
+detects and puts details of the modified files into the queue before the assertions
+happen. Some tests also disable the auto reloading if it has been enabled to ensure
+that the separate thread on which the file watcher runs is stopped.
 """
 
 import pytest
@@ -108,6 +109,29 @@ provides = ['generate_message']
 
 def generate_message():
     return 'Message: ' + get_message() + ' - ' + get_message()""")
+
+
+def _await_queue_size(manager, expected_queue_size):
+
+    for i in range(30, 0, -1):
+        if manager._file_watcher.modified_files_queue.qsize() == expected_queue_size:
+            break
+        time.sleep(0.5)
+
+
+def _get_last_modified_file_time(path):
+    return os.stat(path).st_mtime
+
+
+def _was_file_modified(path, last_modified_time):
+
+    for i in range(30, 0, -1):
+        modified_time = _get_last_modified_file_time(path)
+        if modified_time != last_modified_time:
+            return True
+        time.sleep(0.5)
+
+    return False
 
 
 def test_empty_manager(make_seq_manager):
@@ -520,7 +544,7 @@ def test_execute_sequence_when_module_is_modified_while_auto_reload_enabled(shar
     manager = make_seq_manager(tmp_files)
     manager.enable_auto_reload()
     _modify_test_reload_module_file(shared_datadir)
-    time.sleep(0.05)
+    _await_queue_size(manager, 1)
 
     message = manager.execute('generate_message')
 
@@ -540,7 +564,7 @@ def test_execute_sequence_when_modules_are_modified_while_auto_reload_enabled(sh
     manager.enable_auto_reload()
     _modify_test_reload_module_file(shared_datadir)
     _modify_with_dependency_module_file(shared_datadir)
-    time.sleep(0.05)
+    _await_queue_size(manager, 2)
 
     message = manager.execute('generate_message')
     assert message == 'Message: Hello World - Hello World'
@@ -555,15 +579,19 @@ def test_execute_sequence_when_module_is_modified_while_auto_reload_disabled(sha
     was disabled is not reloaded when it gets executed.
     """
     tmp_files = create_tmp_module_files
+    test_reload_module = tmp_files[0]
+    last_modified_time = _get_last_modified_file_time(test_reload_module)
     manager = make_seq_manager(tmp_files)
     manager.enable_auto_reload()
     manager.disable_auto_reload()
     _modify_test_reload_module_file(shared_datadir)
-    time.sleep(0.05)
+    file_modified = _was_file_modified(test_reload_module, last_modified_time)
 
-    message = manager.execute('generate_message')
-
-    assert message == 'Message: World Hello'
+    if file_modified:
+        message = manager.execute('generate_message')
+        assert message == 'Message: World Hello'
+    else:
+        pytest.fail()
 
 
 def test_calling_of_attribute_function_when_module_is_modified_while_auto_reload_enabled(shared_datadir,
@@ -577,7 +605,7 @@ def test_calling_of_attribute_function_when_module_is_modified_while_auto_reload
     manager = make_seq_manager(tmp_files)
     manager.enable_auto_reload()
     _modify_test_reload_module_file(shared_datadir)
-    time.sleep(0.05)
+    _await_queue_size(manager, 1)
 
     message = manager.generate_message()
 
@@ -594,15 +622,19 @@ def test_calling_of_attribute_function_when_module_is_modified_while_auto_reload
     its functions is called through the manager attribute.
     """
     tmp_files = create_tmp_module_files
+    test_reload_module = tmp_files[0]
+    last_modified_time = _get_last_modified_file_time(test_reload_module)
     manager = make_seq_manager(tmp_files)
     manager.enable_auto_reload()
     manager.disable_auto_reload()
     _modify_test_reload_module_file(shared_datadir)
-    time.sleep(0.05)
+    file_modified = _was_file_modified(test_reload_module, last_modified_time)
 
-    message = manager.generate_message()
-
-    assert message == 'Message: World Hello'
+    if file_modified:
+        message = manager.generate_message()
+        assert message == 'Message: World Hello'
+    else:
+        pytest.fail()
 
 
 def test_execute_missing_sequence(make_seq_manager):
