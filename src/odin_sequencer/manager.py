@@ -120,7 +120,9 @@ class CommandSequenceManager:
             # are directly executed as callable functions from the manager itself. 
             for seq_name in provides:
                 try:
-                    setattr(self, seq_name, partial(self.execute, getattr(module, seq_name)))
+                    seq_alias = seq_name + '_'
+                    setattr(self, seq_alias, getattr(module, seq_name))
+                    setattr(self, seq_name, partial(self.execute, seq_alias))
                 except AttributeError:
                     raise CommandSequenceError(
                         "{} does not implement {} listed in its provided sequences".format(
@@ -315,8 +317,7 @@ class CommandSequenceManager:
         :param *kwargs: variable list of keyword arguments to pass to function
         :return: return value of called function
         """
-        modules_reloaded = False
-        if  self._auto_reload and self._file_watcher:
+        if self._auto_reload and self._file_watcher:
             file_paths = []
 
             # Check the queue to see if it contains any modules that require reloading
@@ -325,27 +326,16 @@ class CommandSequenceManager:
                 file_paths.append(file_path)
 
             if file_paths:
-                modules_reloaded = True
                 self._file_watcher.remove_watch(file_paths)
                 self.reload(file_paths)
 
-        if isinstance(sequence_name, str):
-            # Check if the named sequence function is loaded and execute it, otherwise raise an
-            # exception
-            if hasattr(self, sequence_name):
+        if hasattr(self, sequence_name):
 
-                return getattr(self, sequence_name)(*args, **kwargs)
-            else:
-                raise CommandSequenceError(
-                    'Missing command sequence: {}'.format(sequence_name)
-                )
+            return getattr(self, sequence_name)(*args, **kwargs)
         else:
-            if modules_reloaded:
-                # This must be done when modules are reloaded as the sequence_name function 
-                # object could be a reference to the old function and not the updated one
-                return getattr(self, sequence_name.__name__)(*args, **kwargs)
-            else:
-                return sequence_name(*args, **kwargs)
+            raise CommandSequenceError(
+                'Missing command sequence: {}'.format(sequence_name)
+                )
 
     def add_context(self, name, obj):
         """Add an object to the manager context.
