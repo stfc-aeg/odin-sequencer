@@ -2,7 +2,7 @@
 
 """Tests for odin_sequencer package.
 
-Some tests use the _was_file_modified or _await_queue_size method to ensure that
+Some tests use the was_file_modified or _await_queue_size method to ensure that
 a file was modified or that the file watcher, which runs in a separate thread,
 detects and puts details of the modified files into the queue before the assertions
 happen. Some tests also disable the auto reloading if it has been enabled to ensure
@@ -15,6 +15,8 @@ import os
 import time
 
 from odin_sequencer import CommandSequenceManager, CommandSequenceError
+from .testutils import (modify_test_reload_module_file, modify_with_dependency_module_file, 
+                        get_last_modified_file_time, was_file_modified)
 
 
 @pytest.fixture
@@ -71,67 +73,17 @@ def context_object():
     return ContextObject(255374)
 
 
-@pytest.fixture
-def create_tmp_module_files(shared_datadir):
-    """
-    Test fixture for creating temporary module files that can be used to test the reload
-    mechanism of the sequence manager.
-    """
-
-    test_reload_module = shared_datadir.joinpath('test_reload.py')
-    test_reload_module.write_text("""provides = ['get_message']
-def get_message():
-    return 'World Hello'""")
-
-    with_dependency_module = shared_datadir.joinpath('with_dependency.py')
-    with_dependency_module.write_text("""requires = ['test_reload']
-provides = ['generate_message']
-
-def generate_message():
-    return 'Message: ' + get_message()""")
-
-    return [test_reload_module, with_dependency_module]
-
-
-def _modify_test_reload_module_file(shared_datadir):
-    module = shared_datadir.joinpath('test_reload.py')
-
-    module.write_text("""provides = ['get_message']
-def get_message():
-    return 'Hello World'""")
-
-
-def _modify_with_dependency_module_file(shared_datadir):
-    module = shared_datadir.joinpath('with_dependency.py')
-
-    module.write_text("""requires = ['test_reload']
-provides = ['generate_message']
-
-def generate_message():
-    return 'Message: ' + get_message() + ' - ' + get_message()""")
-
-
 def _await_queue_size(manager, expected_queue_size):
-
-    for i in range(30, 0, -1):
-        if manager._file_watcher.modified_files_queue.qsize() == expected_queue_size:
+    """
+    This method Waits for the size of the queue to reach the given expected queue
+    size number. The loop exists if the number is not reached after 15 seconds.
+    param file_watcher: file watcher object from where the queue can be acccessed
+    param expected_queue_size: the size that the queue needs to reach
+    """
+    for _ in range(30, 0, -1):
+        if manager.file_watcher.modified_files_queue.qsize() == expected_queue_size:
             break
         time.sleep(0.5)
-
-
-def _get_last_modified_file_time(path):
-    return os.stat(path).st_mtime
-
-
-def _was_file_modified(path, last_modified_time):
-
-    for i in range(30, 0, -1):
-        modified_time = _get_last_modified_file_time(path)
-        if modified_time != last_modified_time:
-            return True
-        time.sleep(0.5)
-
-    return False
 
 
 def test_empty_manager(make_seq_manager):
@@ -189,7 +141,7 @@ def test_load_with_missing_module(make_seq_manager):
     """
     file_name = 'does_not_exist.py'
     with pytest.raises(
-        CommandSequenceError, match=r'Sequence module file .*\/{} not found'.format(file_name)
+            CommandSequenceError, match=r'Sequence module file .*\/{} not found'.format(file_name)
     ):
         make_seq_manager(file_name)
 
@@ -275,7 +227,7 @@ def test_reload_with_module_name(shared_datadir, make_seq_manager, create_tmp_mo
     module = tmp_files[0]
     manager = make_seq_manager(tmp_files)
 
-    _modify_test_reload_module_file(shared_datadir)
+    modify_test_reload_module_file(shared_datadir)
     manager.reload(module_names=module.stem)
     message = manager.generate_message()
 
@@ -291,7 +243,7 @@ def test_reload_with_file_path_object(shared_datadir, make_seq_manager, create_t
     module = tmp_files[0]
     manager = make_seq_manager(tmp_files)
 
-    _modify_test_reload_module_file(shared_datadir)
+    modify_test_reload_module_file(shared_datadir)
     manager.reload(file_paths=module)
     message = manager.generate_message()
 
@@ -307,7 +259,7 @@ def test_reload_with_file_path_as_string(shared_datadir, make_seq_manager, creat
     module = tmp_files[0]
     manager = make_seq_manager(tmp_files)
 
-    _modify_test_reload_module_file(shared_datadir)
+    modify_test_reload_module_file(shared_datadir)
     manager.reload(file_paths=str(module))
     message = manager.generate_message()
 
@@ -322,8 +274,8 @@ def test_reload_multiple_modules(shared_datadir, make_seq_manager, create_tmp_mo
     tmp_files = create_tmp_module_files
     manager = make_seq_manager(tmp_files)
 
-    _modify_test_reload_module_file(shared_datadir)
-    _modify_with_dependency_module_file(shared_datadir)
+    modify_test_reload_module_file(shared_datadir)
+    modify_with_dependency_module_file(shared_datadir)
     manager.reload(file_paths=tmp_files)
     message = manager.generate_message()
 
@@ -338,8 +290,8 @@ def test_reload_without_module_names_and_file_paths(shared_datadir, make_seq_man
     tmp_files = create_tmp_module_files
     manager = make_seq_manager(tmp_files)
 
-    _modify_test_reload_module_file(shared_datadir)
-    _modify_with_dependency_module_file(shared_datadir)
+    modify_test_reload_module_file(shared_datadir)
+    modify_with_dependency_module_file(shared_datadir)
     manager.reload()
     message = manager.generate_message()
 
@@ -357,7 +309,7 @@ def test_reload_with_path_to_not_loaded_module(make_seq_manager, shared_datadir)
     with pytest.raises(CommandSequenceError,
         match='Cannot reload file {} as it is not loaded into the manager'.format(module)
     ):
-        manager.reload(file_paths=module) 
+        manager.reload(file_paths=module)
 
 
 def test_reload_with_not_loaded_module_name(make_seq_manager):
@@ -371,7 +323,7 @@ def test_reload_with_not_loaded_module_name(make_seq_manager):
     with pytest.raises(CommandSequenceError,
         match='Cannot reload module {} as it is not loaded into the manager'.format(module)
     ):
-        manager.reload(module_names=module) 
+        manager.reload(module_names=module)
 
 
 def test_reload_when_byte_compiled_file_of_module_is_deleted(shared_datadir, make_seq_manager, create_tmp_module_files):
@@ -383,7 +335,7 @@ def test_reload_when_byte_compiled_file_of_module_is_deleted(shared_datadir, mak
     module = tmp_files[0]
     manager = make_seq_manager(tmp_files)
 
-    _modify_test_reload_module_file(shared_datadir)
+    modify_test_reload_module_file(shared_datadir)
 
     os.remove(importlib.util.cache_from_source(module))
     manager.reload(file_paths=str(module))
@@ -475,7 +427,7 @@ def test_sequence_mismatched_provide(make_seq_manager):
     with pytest.raises(CommandSequenceError,
         match='{} does not implement missing_sequence listed in its provided sequences'.format(file_stem)
     ):
-        make_seq_manager('{}.py'.format(file_stem)) 
+        make_seq_manager('{}.py'.format(file_stem))
 
 
 def test_sequence_with_requires(make_seq_manager):
@@ -505,7 +457,7 @@ def test_sequence_missing_requires(make_seq_manager):
     """
     file = 'with_requires.py'
     with pytest.raises(
-        CommandSequenceError, match='Failed to resolve required command sequence modules'
+            CommandSequenceError, match='Failed to resolve required command sequence modules'
     ):
         make_seq_manager(file)
 
@@ -537,13 +489,13 @@ def test_execute_sequence(make_seq_manager):
 def test_execute_sequence_when_module_is_modified_while_auto_reload_enabled(shared_datadir, make_seq_manager,
                                                                             create_tmp_module_files):
     """
-    Test that a module that has been modified while auto reloading 
+    Test that a module that has been modified while auto reloading
     was enabled is reloaded when it gets executed.
     """
     tmp_files = create_tmp_module_files
     manager = make_seq_manager(tmp_files)
     manager.enable_auto_reload()
-    _modify_test_reload_module_file(shared_datadir)
+    modify_test_reload_module_file(shared_datadir)
     _await_queue_size(manager, 1)
 
     message = manager.execute('generate_message')
@@ -562,8 +514,8 @@ def test_execute_sequence_when_modules_are_modified_while_auto_reload_enabled(sh
     tmp_files = create_tmp_module_files
     manager = make_seq_manager(tmp_files)
     manager.enable_auto_reload()
-    _modify_test_reload_module_file(shared_datadir)
-    _modify_with_dependency_module_file(shared_datadir)
+    modify_test_reload_module_file(shared_datadir)
+    modify_with_dependency_module_file(shared_datadir)
     _await_queue_size(manager, 2)
 
     message = manager.execute('generate_message')
@@ -580,12 +532,12 @@ def test_execute_sequence_when_module_is_modified_while_auto_reload_disabled(sha
     """
     tmp_files = create_tmp_module_files
     test_reload_module = tmp_files[0]
-    last_modified_time = _get_last_modified_file_time(test_reload_module)
+    last_modified_time = get_last_modified_file_time(test_reload_module)
     manager = make_seq_manager(tmp_files)
     manager.enable_auto_reload()
     manager.disable_auto_reload()
-    _modify_test_reload_module_file(shared_datadir)
-    file_modified = _was_file_modified(test_reload_module, last_modified_time)
+    modify_test_reload_module_file(shared_datadir)
+    file_modified = was_file_modified(test_reload_module, last_modified_time)
 
     if file_modified:
         message = manager.execute('generate_message')
@@ -604,7 +556,7 @@ def test_calling_of_attribute_function_when_module_is_modified_while_auto_reload
     tmp_files = create_tmp_module_files
     manager = make_seq_manager(tmp_files)
     manager.enable_auto_reload()
-    _modify_test_reload_module_file(shared_datadir)
+    modify_test_reload_module_file(shared_datadir)
     _await_queue_size(manager, 1)
 
     message = manager.generate_message()
@@ -623,12 +575,12 @@ def test_calling_of_attribute_function_when_module_is_modified_while_auto_reload
     """
     tmp_files = create_tmp_module_files
     test_reload_module = tmp_files[0]
-    last_modified_time = _get_last_modified_file_time(test_reload_module)
+    last_modified_time = get_last_modified_file_time(test_reload_module)
     manager = make_seq_manager(tmp_files)
     manager.enable_auto_reload()
     manager.disable_auto_reload()
-    _modify_test_reload_module_file(shared_datadir)
-    file_modified = _was_file_modified(test_reload_module, last_modified_time)
+    modify_test_reload_module_file(shared_datadir)
+    file_modified = was_file_modified(test_reload_module, last_modified_time)
 
     if file_modified:
         message = manager.generate_message()
@@ -646,7 +598,7 @@ def test_execute_missing_sequence(make_seq_manager):
     missing_sequence = 'basic_missing'
 
     with pytest.raises(
-        CommandSequenceError, match='Missing command sequence: {}'.format(missing_sequence)
+            CommandSequenceError, match='Missing command sequence: {}'.format(missing_sequence)
     ):
         manager.execute(missing_sequence, 4567)
 
@@ -687,6 +639,6 @@ def test_get_missing_context_object(make_seq_manager):
     manager.add_context(obj_name, context_object)
 
     with pytest.raises(
-        CommandSequenceError, match=r'Manager context does not contain \S+'
+            CommandSequenceError, match=r'Manager context does not contain \S+'
     ):
         manager.missing_context_obj()

@@ -1,6 +1,6 @@
 """Tests for InotifyFileWatcher class
 
-Some tests use the _was_file_modified or _await_queue_size method to ensure that
+Some tests use the was_file_modified or await_queue_size method to ensure that
 a file was modified or that the file watcher, which runs in a separate thread,
 detects and puts details of the modified files into the queue before the assertions
 happen. Some tests also stop the file watcher if it has been started to ensure that
@@ -8,10 +8,9 @@ the separate thread on which the file watcher runs is stopped.
 """
 
 import pytest
-import time
-import os
 from odin_sequencer import StandaloneFileWatcher, CommandSequenceError
-
+from .testutils import (modify_test_reload_module_file, modify_with_dependency_module_file,
+                        await_queue_size, get_last_modified_file_time, was_file_modified)
 
 @pytest.fixture
 def make_file_watcher():
@@ -21,83 +20,6 @@ def make_file_watcher():
         return StandaloneFileWatcher(path_or_paths)
 
     return _make_file_watcher
-
-
-@pytest.fixture
-def create_tmp_module_files(shared_datadir):
-    """
-    Test fixture for creating temporary module files that can be used to test the
-    detection mechanism of the file watcher.
-    """
-
-    test_reload_module = shared_datadir.joinpath('test_reload.py')
-    test_reload_module.write_text("""provides = ['get_message']
-def get_message():
-    return 'World Hello'""")
-
-    with_dependency_module = shared_datadir.joinpath('with_dependency.py')
-    with_dependency_module.write_text("""requires = ['test_reload']
-provides = ['generate_message']
-
-def generate_message():
-    return 'Message: ' + get_message()""")
-
-    return [test_reload_module, with_dependency_module]
-
-
-def _modify_test_reload_module_file(shared_datadir):
-    """This method modifies the content of the test_reload.py module"""
-    module = shared_datadir.joinpath('test_reload.py')
-
-    module.write_text("""provides = ['get_message']
-def get_message():
-    return 'Hello World'""")
-
-
-def _modify_with_dependency_module_file(shared_datadir):
-    """This method modifies the content of the with_dependency.py module"""
-    module = shared_datadir.joinpath('with_dependency.py')
-
-    module.write_text("""requires = ['test_reload']
-provides = ['generate_message']
-
-def generate_message():
-    return 'Message: ' + get_message() + ' - ' + get_message()""")
-
-
-def _await_queue_size(file_watcher, expected_queue_size):
-    """
-    This method Waits for the size of the queue to reach the given expected queue
-    size number. The loop exists if the number is not reached after 10 seconds.
-    """
-
-    for i in range(30, 0, -1):
-        if file_watcher.modified_files_queue.qsize() == expected_queue_size:
-            break
-        time.sleep(0.5)
-
-
-def _get_last_modified_file_time(path):
-    """This method gets the time that the given file was last modified."""
-    return os.stat(path).st_mtime
-
-
-def _was_file_modified(path, last_modified_time):
-    """This method checks whether the given file was modified.
-
-    :param path: the path to the file
-    :param last_modified_time: the time the file was last modified
-    :return: return False if modification did not occur after 10 seconds,
-                otherwise return True
-    """
-
-    for i in range(30, 0, -1):
-        modified_time = _get_last_modified_file_time(path)
-        if modified_time != last_modified_time:
-            return True
-        time.sleep(0.5)
-
-    return False
 
 
 def test_add_watch_with_file_path(make_file_watcher, create_tmp_module_files):
@@ -228,7 +150,7 @@ def test_stop_when_file_watcher_is_not_started(make_file_watcher):
     file_watcher = make_file_watcher()
 
     with pytest.raises(
-        CommandSequenceError, match='Cannot stop file watcher as it has not been started'
+            CommandSequenceError, match='Cannot stop file watcher as it has not been started'
     ):
         file_watcher.stop()
 
@@ -256,7 +178,7 @@ def test_run_when_file_watcher_is_started(make_file_watcher, create_tmp_module_f
     file_watcher = make_file_watcher(tmp_files)
 
     with pytest.raises(
-        CommandSequenceError, match='File watcher has already been started'
+            CommandSequenceError, match='File watcher has already been started'
     ):
         file_watcher.run()
 
@@ -299,8 +221,8 @@ def test_file_watcher_when_watched_file_is_modified(shared_datadir, make_file_wa
     tmp_files = create_tmp_module_files
     file_watcher = make_file_watcher(tmp_files)
 
-    _modify_test_reload_module_file(shared_datadir)
-    _await_queue_size(file_watcher, 1)
+    modify_test_reload_module_file(shared_datadir)
+    await_queue_size(file_watcher, 1)
 
     assert file_watcher.modified_files_queue.qsize() == 1
 
@@ -316,9 +238,9 @@ def test_file_watcher_when_multiple_watched_files_are_modified(shared_datadir, m
     tmp_files = create_tmp_module_files
     file_watcher = make_file_watcher(tmp_files)
 
-    _modify_test_reload_module_file(shared_datadir)
-    _modify_with_dependency_module_file(shared_datadir)
-    _await_queue_size(file_watcher, 2)
+    modify_test_reload_module_file(shared_datadir)
+    modify_with_dependency_module_file(shared_datadir)
+    await_queue_size(file_watcher, 2)
 
     assert file_watcher.modified_files_queue.qsize() == 2
 
@@ -334,11 +256,11 @@ def test_file_watcher_when_non_watched_file_is_modified(shared_datadir, make_fil
     tmp_files = create_tmp_module_files
     test_reload_module = tmp_files[0]
     with_dependency_module = tmp_files[1]
-    last_modified_time = _get_last_modified_file_time(with_dependency_module)
+    last_modified_time = get_last_modified_file_time(with_dependency_module)
     file_watcher = make_file_watcher(test_reload_module)
 
-    _modify_with_dependency_module_file(shared_datadir)
-    file_modified = _was_file_modified(with_dependency_module, last_modified_time)
+    modify_with_dependency_module_file(shared_datadir)
+    file_modified = was_file_modified(with_dependency_module, last_modified_time)
 
     if file_modified:
         assert file_watcher.modified_files_queue.empty() is True
@@ -356,12 +278,12 @@ def test_file_watcher_when_previously_watched_file_is_modified(shared_datadir, m
     """
     tmp_files = create_tmp_module_files
     test_reload_module = create_tmp_module_files[0]
-    last_modified_time = _get_last_modified_file_time(test_reload_module)
+    last_modified_time = get_last_modified_file_time(test_reload_module)
     file_watcher = make_file_watcher(tmp_files)
 
     file_watcher.remove_watch(test_reload_module)
-    _modify_test_reload_module_file(shared_datadir)
-    file_modified = _was_file_modified(test_reload_module, last_modified_time)
+    modify_test_reload_module_file(shared_datadir)
+    file_modified = was_file_modified(test_reload_module, last_modified_time)
 
     if file_modified:
         assert file_watcher.modified_files_queue.empty() is True
