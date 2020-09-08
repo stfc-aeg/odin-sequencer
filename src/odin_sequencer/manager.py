@@ -45,8 +45,8 @@ class CommandSequenceManager:
         self.provides = {}
         self.context = {}
         self.file_paths = {}
-        self._auto_reload = False
-        self._file_watcher = None
+        self.auto_reload = False
+        self.file_watcher = None
 
         # If one or more files have been specified, attempt to load and resolve them
         if path_or_paths:
@@ -61,7 +61,8 @@ class CommandSequenceManager:
         manager will then attempt to resolve all dependencies and make modules available. All
         module files in a directory are loaded if a path to a directory is specified.
 
-        :param path_or_paths: names of file and directory paths to load. These can be of type String or Path.
+        :param path_or_paths: names of file and directory paths to load. These can be of type
+                                String or Path.
         :param resolve: resolve loaded modules if True (default true)
         """
 
@@ -106,8 +107,8 @@ class CommandSequenceManager:
                     'Sequence module file {} not found'.format(file_path)
                 )
 
-            # If the module declares which sequence functions it provides, use that, otherwise assume
-            # that all functions are to be made available
+            # If the module declares which sequence functions it provides, use that, otherwise
+            # assume that all functions are to be made available
             if hasattr(module, 'provides'):
                 provides = module.provides
             else:
@@ -117,7 +118,7 @@ class CommandSequenceManager:
             # to be used by calling code. A reference to a partial function is set which calls
             # the execute function instead of the sequence function directly. This ensures
             # that modules get reloaded when auto reloading is enabled and the functions
-            # are directly executed as callable functions from the manager itself. 
+            # are directly executed as callable functions from the manager itself.
             for seq_name in provides:
                 try:
                     seq_alias = seq_name + '_'
@@ -151,18 +152,18 @@ class CommandSequenceManager:
             self.resolve()
 
         # Add the module(s) to the watch list if auto reloading is enabled
-        if self._auto_reload and self._file_watcher:
-            self._file_watcher.add_watch(path_or_paths)
+        if self.auto_reload and self.file_watcher:
+            self.file_watcher.add_watch(path_or_paths)
 
     def reload(self, file_paths=None, module_names=None, resolve=True):
         """Reload currently loaded modules.
-        
+
         This method attempts to reload all or specific sequence modules currently loaded
         into the manager. It does this by manually unloading all sequence modules and then
-        loading them again and resolving their dependencies. 
+        loading them again and resolving their dependencies.
 
         :param module_names: module name(s) that require reloading (default: None)
-        :param file_paths: path(s) to sequence module file(s) that require reloading (default: None) 
+        :param file_paths: path(s) to sequence module file(s) that require reloading (default: None)
         :param resolve: resolve loaded modules if True (default: true)
         """
 
@@ -178,7 +179,8 @@ class CommandSequenceManager:
 
                 if file_path.stem not in self.modules:
                     raise CommandSequenceError(
-                        'Cannot reload file {} as it is not loaded into the manager'.format(file_path)
+                        'Cannot reload file {} as it is not loaded into the manager'.format(
+                            file_path)
                     )
 
                 file_paths[i] = file_path
@@ -188,16 +190,17 @@ class CommandSequenceManager:
                 module_names = [module_names]
 
             for module_name in module_names:
-                if module_name not in self.modules: 
+                if module_name not in self.modules:
                     raise CommandSequenceError(
-                        'Cannot reload module {} as it is not loaded into the manager'.format(module_name)
+                        'Cannot reload module {} as it is not loaded into the manager'.format(
+                            module_name)
                     )
 
                 if file_paths is None:
                     file_paths = []
 
                 file_paths.append(self.file_paths[module_name])
-            
+
         if module_names is None and file_paths is None:
             file_paths = list(self.file_paths.values())
 
@@ -218,32 +221,33 @@ class CommandSequenceManager:
                 os.remove(importlib.util.cache_from_source(self.file_paths[name]))
             except (FileNotFoundError, OSError):
                 pass
-            
-            del(self.modules[name])
-            del(self.file_paths[name])
-            
+
+            del self.modules[name]
+            del self.file_paths[name]
+
     def enable_auto_reload(self):
         """ Enable auto reloading of modules currently loaded in the manager.
 
         This method enables auto reloading of all the modules that are currently loaded
-        in the manager. A file watcher is created using the factory class and the paths 
-        to all the loaded modules are passed to the file watcher so that it can watch 
-        the modules for any modifications. Auto reloading is re-enabled and the already 
+        in the manager. A file watcher is created using the factory class and the paths
+        to all the loaded modules are passed to the file watcher so that it can watch
+        the modules for any modifications. Auto reloading is re-enabled and the already
         created file watcher is reused if auto reloading is disabled when this function
         is called.
         """
-        if not self._auto_reload:
-            if not self._file_watcher:
-                self._file_watcher = FileWatcherFactory.create_file_watcher(path_or_paths=list(self.file_paths.values()))
+        if not self.auto_reload:
+            if not self.file_watcher:
+                self.file_watcher = FileWatcherFactory.create_file_watcher(
+                    path_or_paths=list(self.file_paths.values()))
             else:
                 self._re_enable_auto_reload()
 
-            self._auto_reload = True
+            self.auto_reload = True
 
     def _re_enable_auto_reload(self):
         """Re-enables the auto reloading mechanism"""
-        self._file_watcher.add_watch(list(self.file_paths.values()))
-        self._file_watcher.run()
+        self.file_watcher.add_watch(list(self.file_paths.values()))
+        self.file_watcher.run()
 
     def disable_auto_reload(self):
         """ Disable auto reloading of modules currently loaded in the manager.
@@ -251,9 +255,9 @@ class CommandSequenceManager:
         This method disabled auto reloading of all the modules that are currently loaded
         in the manager.
         """
-        if self._file_watcher and self._auto_reload:
-            self._file_watcher.stop()
-            self._auto_reload = False
+        if self.file_watcher and self.auto_reload:
+            self.file_watcher.stop()
+            self.auto_reload = False
 
     def _retrieve_directory_files(self, directory_path):
         """Retrieve paths to all sequence files in a directory.
@@ -317,16 +321,16 @@ class CommandSequenceManager:
         :param *kwargs: variable list of keyword arguments to pass to function
         :return: return value of called function
         """
-        if self._auto_reload and self._file_watcher:
+        if self.auto_reload and self.file_watcher:
             file_paths = []
 
             # Check the queue to see if it contains any modules that require reloading
-            while not self._file_watcher.modified_files_queue.empty():
-                file_path = self._file_watcher.modified_files_queue.get()
+            while not self.file_watcher.modified_files_queue.empty():
+                file_path = self.file_watcher.modified_files_queue.get()
                 file_paths.append(file_path)
 
             if file_paths:
-                self._file_watcher.remove_watch(file_paths)
+                self.file_watcher.remove_watch(file_paths)
                 self.reload(file_paths)
 
         if hasattr(self, sequence_name):

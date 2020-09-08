@@ -1,3 +1,5 @@
+"""This module includes commonly used pytest fixtures that can be called from test functions."""
+
 import pytest
 
 

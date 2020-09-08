@@ -34,7 +34,7 @@ def await_queue_size(file_watcher, expected_queue_size):
     size number. The loop exists if the number is not reached after 10 seconds.
     """
 
-    for i in range(30, 0, -1):
+    for _ in range(30, 0, -1):
         if file_watcher.modified_files_queue.qsize() == expected_queue_size:
             break
         time.sleep(0.5)

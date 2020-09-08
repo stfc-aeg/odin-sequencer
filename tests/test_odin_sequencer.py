@@ -9,13 +9,13 @@ happen. Some tests also disable the auto reloading if it has been enabled to ens
 that the separate thread on which the file watcher runs is stopped.
 """
 
-import pytest
-import importlib.util
-import os
 import time
+import os
+import importlib.util
+import pytest
 
 from odin_sequencer import CommandSequenceManager, CommandSequenceError
-from .testutils import (modify_test_reload_module_file, modify_with_dependency_module_file, 
+from .testutils import (modify_test_reload_module_file, modify_with_dependency_module_file,
                         get_last_modified_file_time, was_file_modified)
 
 
@@ -49,8 +49,9 @@ def create_paths(shared_datadir):
 
         if not isinstance(files_or_directories, list):
             return shared_datadir.joinpath(files_or_directories)
-        else:
-            return [shared_datadir.joinpath(file_or_directory) for file_or_directory in files_or_directories]
+
+        return [shared_datadir.joinpath(
+            file_or_directory) for file_or_directory in files_or_directories]
 
     return _create_paths
 
@@ -62,12 +63,14 @@ def context_object():
     the sequence manager context and accessed for test.
     """
 
-    class ContextObject(object):
+    class ContextObject():
+        """An example of a context object"""
 
         def __init__(self, value):
             self.value = value
 
         def increment(self, val):
+            """Increments a given value by 1"""
             return val + 1
 
     return ContextObject(255374)
@@ -117,7 +120,7 @@ def test_load_with_illegal_syntax(make_seq_manager):
     """
     file_name = 'illegal_syntax.py'
     with pytest.raises(
-        CommandSequenceError, match=r'Syntax error loading .*\/{}'.format(file_name)
+            CommandSequenceError, match=r'Syntax error loading .*\/{}'.format(file_name)
     ):
         make_seq_manager(file_name)
 
@@ -129,7 +132,7 @@ def test_load_with_bad_import(make_seq_manager):
     """
     file_name = 'illegal_import.py'
     with pytest.raises(
-        CommandSequenceError, match=r'Import error loading .*\/{}'.format(file_name)
+            CommandSequenceError, match=r'Import error loading .*\/{}'.format(file_name)
     ):
         make_seq_manager(file_name)
 
@@ -180,8 +183,8 @@ def test_load_with_missing_directory(shared_datadir, make_seq_manager):
     """
     directory_path = shared_datadir.joinpath('missing_directory')
 
-    with pytest.raises(CommandSequenceError,
-        match='Sequence directory {} not found'.format(directory_path)
+    with pytest.raises(
+            CommandSequenceError, match='Sequence directory {} not found'.format(directory_path)
     ):
         make_seq_manager(directory_path)
 
@@ -209,11 +212,11 @@ def test_explicit_module_load_when_auto_reloading_enabled(make_seq_manager, crea
 
     manager.load(str(file_paths[1]))
 
-    assert manager._file_watcher is not None
-    assert manager._auto_reload is True
-    assert len(manager._file_watcher._watched_files) == len(files)
-    assert str(file_paths[0]) in manager._file_watcher._watched_files
-    assert str(file_paths[1]) in manager._file_watcher._watched_files
+    assert manager.file_watcher is not None
+    assert manager.auto_reload is True
+    assert len(manager.file_watcher.watched_files) == len(files)
+    assert str(file_paths[0]) in manager.file_watcher.watched_files
+    assert str(file_paths[1]) in manager.file_watcher.watched_files
 
     manager.disable_auto_reload()
 
@@ -282,7 +285,8 @@ def test_reload_multiple_modules(shared_datadir, make_seq_manager, create_tmp_mo
     assert message == 'Message: Hello World - Hello World'
 
 
-def test_reload_without_module_names_and_file_paths(shared_datadir, make_seq_manager, create_tmp_module_files):
+def test_reload_without_module_names_and_file_paths(shared_datadir, make_seq_manager,
+                                                    create_tmp_module_files):
     """
     Test that all the loaded modules are successfully reloaded when no module names or
     file paths are provided to the reload function.
@@ -306,8 +310,9 @@ def test_reload_with_path_to_not_loaded_module(make_seq_manager, shared_datadir)
     module = shared_datadir.joinpath('basic_sequences.py')
     manager = make_seq_manager()
 
-    with pytest.raises(CommandSequenceError,
-        match='Cannot reload file {} as it is not loaded into the manager'.format(module)
+    with pytest.raises(
+            CommandSequenceError, match='Cannot reload file {} as it is not loaded '
+                                        'into the manager'.format(module)
     ):
         manager.reload(file_paths=module)
 
@@ -320,13 +325,15 @@ def test_reload_with_not_loaded_module_name(make_seq_manager):
     module = 'basic_sequences'
     manager = make_seq_manager()
 
-    with pytest.raises(CommandSequenceError,
-        match='Cannot reload module {} as it is not loaded into the manager'.format(module)
+    with pytest.raises(
+            CommandSequenceError, match='Cannot reload module {} as it is not loaded '
+                                        'into the manager'.format(module)
     ):
         manager.reload(module_names=module)
 
 
-def test_reload_when_byte_compiled_file_of_module_is_deleted(shared_datadir, make_seq_manager, create_tmp_module_files):
+def test_reload_when_byte_compiled_file_of_module_is_deleted(shared_datadir, make_seq_manager,
+                                                             create_tmp_module_files):
     """
     Test that program does not break if the byte-compiled file of a specific module is
     deleted before the module is reloaded.
@@ -344,7 +351,7 @@ def test_reload_when_byte_compiled_file_of_module_is_deleted(shared_datadir, mak
     assert message == 'Message: Hello World'
 
 
-def test_enable_auto_reload(shared_datadir, make_seq_manager):
+def test_enable_auto_reload(make_seq_manager):
     """
     Test that _auto_reload is set to True and
     a file watcher is successfully created.
@@ -353,11 +360,12 @@ def test_enable_auto_reload(shared_datadir, make_seq_manager):
 
     manager.enable_auto_reload()
 
-    assert manager._auto_reload is True
-    assert manager._file_watcher is not None
+    assert manager.auto_reload is True
+    assert manager.file_watcher is not None
 
 
-def test_enable_auto_reload_when_auto_reloading_previously_enabled(shared_datadir, make_seq_manager):
+def test_enable_auto_reload_when_auto_reloading_previously_enabled(shared_datadir,
+                                                                   make_seq_manager):
     """
     Test that _auto_reload is set to True and the file watcher continues
     with watching files after being re-enabled.
@@ -371,17 +379,17 @@ def test_enable_auto_reload_when_auto_reloading_previously_enabled(shared_datadi
 
     manager.enable_auto_reload()
 
-    assert manager._file_watcher is not None
-    assert manager._auto_reload is True
-    assert manager._file_watcher._is_watching is True
-    assert len(manager._file_watcher._watched_files) == len(files)
-    assert str(basic_sequences_file_path) in manager._file_watcher._watched_files
-    assert str(with_requires_file_path) in manager._file_watcher._watched_files
+    assert manager.file_watcher is not None
+    assert manager.auto_reload is True
+    assert manager.file_watcher.is_watching is True
+    assert len(manager.file_watcher.watched_files) == len(files)
+    assert str(basic_sequences_file_path) in manager.file_watcher.watched_files
+    assert str(with_requires_file_path) in manager.file_watcher.watched_files
 
     manager.disable_auto_reload()
 
 
-def test_disable_auto_reload(make_seq_manager, create_tmp_module_files):
+def test_disable_auto_reload(make_seq_manager):
     """
     Test that _auto_reload is set to False.
     """
@@ -391,7 +399,7 @@ def test_disable_auto_reload(make_seq_manager, create_tmp_module_files):
 
     manager.disable_auto_reload()
 
-    assert manager._auto_reload is False
+    assert manager.auto_reload is False
 
 
 def test_manager_multiple_files(make_seq_manager):
@@ -424,8 +432,9 @@ def test_sequence_mismatched_provide(make_seq_manager):
     the appropriate exception.
     """
     file_stem = 'provide_mismatch'
-    with pytest.raises(CommandSequenceError,
-        match='{} does not implement missing_sequence listed in its provided sequences'.format(file_stem)
+    with pytest.raises(
+            CommandSequenceError, match='{} does not implement missing_sequence listed '
+                                        'in its provided sequences'.format(file_stem)
     ):
         make_seq_manager('{}.py'.format(file_stem))
 
@@ -486,8 +495,8 @@ def test_execute_sequence(make_seq_manager):
     assert ret_value == test_value
 
 
-def test_execute_sequence_when_module_is_modified_while_auto_reload_enabled(shared_datadir, make_seq_manager,
-                                                                            create_tmp_module_files):
+def test_execute_when_module_is_modified_while_auto_reload_enabled(shared_datadir, make_seq_manager,
+                                                                   create_tmp_module_files):
     """
     Test that a module that has been modified while auto reloading
     was enabled is reloaded when it gets executed.
@@ -505,8 +514,9 @@ def test_execute_sequence_when_module_is_modified_while_auto_reload_enabled(shar
     manager.disable_auto_reload()
 
 
-def test_execute_sequence_when_modules_are_modified_while_auto_reload_enabled(shared_datadir, make_seq_manager,
-                                                                              create_tmp_module_files):
+def test_execute_when_modules_are_modified_while_auto_reload_enabled(shared_datadir,
+                                                                     make_seq_manager,
+                                                                     create_tmp_module_files):
     """
     Test that modules that have been modified while auto reloading
     was enabled are reloaded when they get executed.
@@ -524,8 +534,9 @@ def test_execute_sequence_when_modules_are_modified_while_auto_reload_enabled(sh
     manager.disable_auto_reload()
 
 
-def test_execute_sequence_when_module_is_modified_while_auto_reload_disabled(shared_datadir, make_seq_manager,
-                                                                             create_tmp_module_files):
+def test_execute_when_module_is_modified_while_auto_reload_disabled(shared_datadir,
+                                                                    make_seq_manager,
+                                                                    create_tmp_module_files):
     """
     Test that a module that has been modified while auto reloading
     was disabled is not reloaded when it gets executed.
@@ -546,12 +557,12 @@ def test_execute_sequence_when_module_is_modified_while_auto_reload_disabled(sha
         pytest.fail()
 
 
-def test_calling_of_attribute_function_when_module_is_modified_while_auto_reload_enabled(shared_datadir,
-                                                                                         make_seq_manager,
-                                                                                         create_tmp_module_files):
+def test_attribute_func_when_module_is_modified_while_auto_reload_enabled(shared_datadir,
+                                                                          make_seq_manager,
+                                                                          create_tmp_module_files):
     """
-    Test that a module that has been modified while auto reloading was enabled is reloaded when one of
-    its functions is called through the manager attribute.
+    Test that a module that has been modified while auto reloading was enabled is reloaded
+    when one of its functions is called through the manager attribute.
     """
     tmp_files = create_tmp_module_files
     manager = make_seq_manager(tmp_files)
@@ -566,12 +577,12 @@ def test_calling_of_attribute_function_when_module_is_modified_while_auto_reload
     manager.disable_auto_reload()
 
 
-def test_calling_of_attribute_function_when_module_is_modified_while_auto_reload_disabled(shared_datadir,
-                                                                                         make_seq_manager,
-                                                                                         create_tmp_module_files):
+def test_attribute_func_when_module_is_modified_while_auto_reload_disabled(shared_datadir,
+                                                                           make_seq_manager,
+                                                                           create_tmp_module_files):
     """
-    Test that a module that has been modified while auto reloading was disabled is not reloaded when one of
-    its functions is called through the manager attribute.
+    Test that a module that has been modified while auto reloading was disabled is not reloaded
+    when one of its functions is called through the manager attribute.
     """
     tmp_files = create_tmp_module_files
     test_reload_module = tmp_files[0]

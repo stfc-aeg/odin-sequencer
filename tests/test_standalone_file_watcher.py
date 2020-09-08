@@ -12,6 +12,7 @@ from odin_sequencer import StandaloneFileWatcher, CommandSequenceError
 from .testutils import (modify_test_reload_module_file, modify_with_dependency_module_file,
                         await_queue_size, get_last_modified_file_time, was_file_modified)
 
+
 @pytest.fixture
 def make_file_watcher():
     """Test fixture for creating StandaloneFileWatcher object"""
@@ -31,7 +32,7 @@ def test_add_watch_with_file_path(make_file_watcher, create_tmp_module_files):
     file_watcher = make_file_watcher()
     file_watcher.add_watch(module)
 
-    assert len(file_watcher._watched_files) == 1
+    assert len(file_watcher.watched_files) == 1
 
 
 def test_add_watch_with_multiple_file_paths(make_file_watcher, create_tmp_module_files):
@@ -44,9 +45,9 @@ def test_add_watch_with_multiple_file_paths(make_file_watcher, create_tmp_module
 
     file_watcher.add_watch(tmp_files)
 
-    assert len(file_watcher._watched_files) == len(tmp_files)
-    assert str(tmp_files[0]) in file_watcher._watched_files
-    assert str(tmp_files[1]) in file_watcher._watched_files
+    assert len(file_watcher.watched_files) == len(tmp_files)
+    assert str(tmp_files[0]) in file_watcher.watched_files
+    assert str(tmp_files[1]) in file_watcher.watched_files
 
 
 def test_add_watch_with_file_path_as_string(make_file_watcher, create_tmp_module_files):
@@ -59,8 +60,8 @@ def test_add_watch_with_file_path_as_string(make_file_watcher, create_tmp_module
 
     file_watcher.add_watch(module)
 
-    assert len(file_watcher._watched_files) == 1
-    assert module in file_watcher._watched_files
+    assert len(file_watcher.watched_files) == 1
+    assert module in file_watcher.watched_files
 
 
 def test_add_watch_with_missing_file_path(make_file_watcher, shared_datadir):
@@ -69,7 +70,7 @@ def test_add_watch_with_missing_file_path(make_file_watcher, shared_datadir):
 
     file_watcher.add_watch(shared_datadir.joinpath('does_not_exist.py'))
 
-    assert len(file_watcher._watched_files) == 0
+    assert len(file_watcher.watched_files) == 0
 
 
 def test_add_watch_with_path_to_already_watched_file(make_file_watcher, create_tmp_module_files):
@@ -80,7 +81,7 @@ def test_add_watch_with_path_to_already_watched_file(make_file_watcher, create_t
     file_watcher.add_watch(module)
     file_watcher.add_watch(module)
 
-    assert len(file_watcher._watched_files) == 1
+    assert len(file_watcher.watched_files) == 1
 
 
 def test_remove_watch_with_file_path(make_file_watcher, create_tmp_module_files):
@@ -94,8 +95,8 @@ def test_remove_watch_with_file_path(make_file_watcher, create_tmp_module_files)
 
     file_watcher.remove_watch(tmp_files[0])
 
-    assert str(tmp_files[0]) not in file_watcher._watched_files
-    assert len(file_watcher._watched_files) == len(tmp_files) - 1
+    assert str(tmp_files[0]) not in file_watcher.watched_files
+    assert len(file_watcher.watched_files) == len(tmp_files) - 1
 
 
 def test_remove_watch_with_multiple_file_paths(make_file_watcher, create_tmp_module_files):
@@ -109,9 +110,9 @@ def test_remove_watch_with_multiple_file_paths(make_file_watcher, create_tmp_mod
 
     file_watcher.remove_watch(tmp_files)
 
-    assert str(tmp_files[0]) not in file_watcher._watched_files
-    assert str(tmp_files[1]) not in file_watcher._watched_files
-    assert len(file_watcher._watched_files) == 0
+    assert str(tmp_files[0]) not in file_watcher.watched_files
+    assert str(tmp_files[1]) not in file_watcher.watched_files
+    assert len(file_watcher.watched_files) == 0
 
 
 def test_remove_watch_with_file_path_as_string(make_file_watcher, create_tmp_module_files):
@@ -125,8 +126,8 @@ def test_remove_watch_with_file_path_as_string(make_file_watcher, create_tmp_mod
 
     file_watcher.remove_watch(str(tmp_files[0]))
 
-    assert str(tmp_files[0]) not in file_watcher._watched_files
-    assert len(file_watcher._watched_files) == len(tmp_files) - 1
+    assert str(tmp_files[0]) not in file_watcher.watched_files
+    assert len(file_watcher.watched_files) == len(tmp_files) - 1
 
 
 def test_remove_watch_with_not_watched_file_path(make_file_watcher, create_tmp_module_files):
@@ -139,7 +140,7 @@ def test_remove_watch_with_not_watched_file_path(make_file_watcher, create_tmp_m
 
     file_watcher.remove_watch(module)
 
-    assert len(file_watcher._watched_files) == 0
+    assert len(file_watcher.watched_files) == 0
 
 
 def test_stop_when_file_watcher_is_not_started(make_file_watcher):
@@ -165,8 +166,8 @@ def test_stop_when_file_watcher_is_started(make_file_watcher, create_tmp_module_
 
     file_watcher.stop()
 
-    assert len(file_watcher._watched_files) == 0
-    assert file_watcher._is_watching is False
+    assert len(file_watcher.watched_files) == 0
+    assert file_watcher.is_watching is False
 
 
 def test_run_when_file_watcher_is_started(make_file_watcher, create_tmp_module_files):
@@ -185,16 +186,16 @@ def test_run_when_file_watcher_is_started(make_file_watcher, create_tmp_module_f
     file_watcher.stop()
 
 
-def test_empty_file_watcher(make_file_watcher, create_tmp_module_files):
+def test_empty_file_watcher(make_file_watcher):
     """
     Test that a file watcher initialised without any paths to files has
     an empty watch list and does not start the watching process.
     """
     file_watcher = make_file_watcher()
 
-    assert file_watcher._thread is None
-    assert len(file_watcher._watched_files) == 0
-    assert file_watcher._is_watching is False
+    assert file_watcher.thread is None
+    assert len(file_watcher.watched_files) == 0
+    assert file_watcher.is_watching is False
 
 
 def test_basic_file_watcher(make_file_watcher, create_tmp_module_files):
@@ -205,9 +206,9 @@ def test_basic_file_watcher(make_file_watcher, create_tmp_module_files):
     module = create_tmp_module_files[0]
     file_watcher = make_file_watcher(module)
 
-    assert file_watcher._thread is not None
-    assert len(file_watcher._watched_files) == 1
-    assert file_watcher._is_watching is True
+    assert file_watcher.thread is not None
+    assert len(file_watcher.watched_files) == 1
+    assert file_watcher.is_watching is True
 
     file_watcher.stop()
 
