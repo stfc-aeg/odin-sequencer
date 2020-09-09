@@ -18,7 +18,7 @@ from .exceptions import CommandSequenceError
 from .watcher import FileWatcherFactory
 
 if sys.version_info < (3, 6, 0):  # pragma: no cover
-    class ModuleNotFoundError(ImportError):
+    class ModuleNotFoundError(ImportError):  # pylint: disable=redefined-builtin
         """Derive ModuleNotFoundError exception for earlier python versions."""
 
 
@@ -171,9 +171,7 @@ class CommandSequenceManager:
             if not isinstance(file_paths, list):
                 file_paths = [file_paths]
 
-            for i in range(len(file_paths)):
-                file_path = file_paths[i]
-
+            for i, file_path in enumerate(file_paths):
                 if not isinstance(file_path, Path):
                     file_path = Path(file_path)
 
@@ -259,7 +257,8 @@ class CommandSequenceManager:
             self.file_watcher.stop()
             self.auto_reload = False
 
-    def _retrieve_directory_files(self, directory_path):
+    @staticmethod
+    def _retrieve_directory_files(directory_path):
         """Retrieve paths to all sequence files in a directory.
 
         This method retrieves the paths to all the sequence files that are stored
@@ -276,7 +275,7 @@ class CommandSequenceManager:
                 'Sequence directory {} not found'.format(directory_path)
             )
 
-        return [file for file in directory_path.glob('*.py')]
+        return list(directory_path.glob('*.py'))
 
     def resolve(self):
         """Resolve dependencies for currently loaded modules.
@@ -292,7 +291,7 @@ class CommandSequenceManager:
 
         # Calculate if any dependencies are missing - if so, raise an exception.
         missing = dependencies - set(self.modules.keys())
-        if len(missing):
+        if missing:
             raise CommandSequenceError(
                 'Failed to resolve required command sequence modules (missing: {})'.format(
                     ','.join(missing)
@@ -333,13 +332,12 @@ class CommandSequenceManager:
                 self.file_watcher.remove_watch(file_paths)
                 self.reload(file_paths)
 
-        if hasattr(self, sequence_name):
-
-            return getattr(self, sequence_name)(*args, **kwargs)
-        else:
+        if not hasattr(self, sequence_name):
             raise CommandSequenceError(
                 'Missing command sequence: {}'.format(sequence_name)
                 )
+
+        return getattr(self, sequence_name)(*args, **kwargs)
 
     def add_context(self, name, obj):
         """Add an object to the manager context.

@@ -75,7 +75,6 @@ class IFileWatcher(ABC):
         Register file(s) for watching. The actual logic of this method
         is defined in the concrete classes that implement this class.
         """
-        pass
 
     @abstractmethod
     def remove_watch(self, path_or_paths):
@@ -83,7 +82,6 @@ class IFileWatcher(ABC):
         Un-register file(s) from watching. The actual logic of this method
         is defined in the concrete classes that implement this class.
         """
-        pass
 
 
 class InotifyFileWatcher(IFileWatcher):
@@ -119,7 +117,6 @@ class InotifyFileWatcher(IFileWatcher):
         the queue. It puts the path only if it is not already in the queue.
         """
         self.is_watching = True
-        print("Inotify class - num of threads is: " + str(threading.active_count()))
 
         for event in self.i.event_gen():
             if not self.is_watching:
@@ -209,7 +206,6 @@ class StandaloneFileWatcher(IFileWatcher):
         modification time in the dictionary.
         """
         self.is_watching = True
-        print("Standalone class - num of threads is: " + str(threading.active_count()))
 
         while self.is_watching:
             for path, last_modified in list(self.watched_files.items()):
