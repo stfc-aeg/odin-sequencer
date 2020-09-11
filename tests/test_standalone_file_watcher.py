@@ -265,10 +265,10 @@ def test_file_watcher_when_non_watched_file_is_modified(shared_datadir, make_fil
 
     if file_modified:
         assert file_watcher.modified_files_queue.empty() is True
+        file_watcher.stop()
     else:
+        file_watcher.stop()
         pytest.fail()
-
-    file_watcher.stop()
 
 
 def test_file_watcher_when_previously_watched_file_is_modified(shared_datadir, make_file_watcher,
@@ -288,7 +288,7 @@ def test_file_watcher_when_previously_watched_file_is_modified(shared_datadir, m
 
     if file_modified:
         assert file_watcher.modified_files_queue.empty() is True
+        file_watcher.stop()
     else:
+        file_watcher.stop()
         pytest.fail()
-
-    file_watcher.stop()

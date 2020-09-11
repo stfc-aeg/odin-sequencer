@@ -118,6 +118,8 @@ class InotifyFileWatcher(IFileWatcher):
         """
         self.is_watching = True
 
+        print("Inotify class - num of threads is: " + str(threading.active_count()))
+
         for event in self.i.event_gen():
             if not self.is_watching:
                 # This solves the problem with a while loop not exiting
@@ -206,6 +208,8 @@ class StandaloneFileWatcher(IFileWatcher):
         modification time in the dictionary.
         """
         self.is_watching = True
+
+        print("Standalone class - num of threads is: " + str(threading.active_count()))
 
         while self.is_watching:
             for path, last_modified in list(self.watched_files.items()):

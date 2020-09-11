@@ -34,8 +34,12 @@ def await_queue_size(file_watcher, expected_queue_size):
     size number. The loop exists if the number is not reached after 10 seconds.
     """
 
-    for _ in range(30, 0, -1):
-        if file_watcher.modified_files_queue.qsize() == expected_queue_size:
+    for i in range(60, 0, -1):
+        actual_queue_size = file_watcher.modified_files_queue.qsize()
+        print("i = {}, expected_queue_size = {}, actual_queue_size = {}".format(
+            i, str(expected_queue_size), str(actual_queue_size)))
+
+        if actual_queue_size == expected_queue_size:
             break
         time.sleep(0.5)
 
@@ -55,8 +59,11 @@ def was_file_modified(path, last_modified_time):
     :return: return False if modification did not occur after 15 seconds,
                 otherwise return True
     """
-    for _ in range(30, 0, -1):
+    for i in range(60, 0, -1):
         modified_time = get_last_modified_file_time(path)
+        print("i = {}, last_modified_time = {}, modified_time = {}".format(
+            i, str(last_modified_time), str(modified_time)))
+
         if modified_time != last_modified_time:
             return True
         time.sleep(0.5)
