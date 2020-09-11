@@ -10,6 +10,7 @@ import os
 
 def modify_test_reload_module_file(shared_datadir):
     """This method modifies the content of the test_reload.py module"""
+    time.sleep(0.1)
     module = shared_datadir.joinpath('test_reload.py')
 
     module.write_text("""provides = ['get_message']
@@ -19,6 +20,7 @@ def get_message():
 
 def modify_with_dependency_module_file(shared_datadir):
     """This method modifies the content of the with_dependency.py module"""
+    time.sleep(0.1)
     module = shared_datadir.joinpath('with_dependency.py')
 
     module.write_text("""requires = ['test_reload']
