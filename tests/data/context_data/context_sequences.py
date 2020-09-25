@@ -2,7 +2,7 @@
 
 provides = ['context_access', 'missing_context_obj']
 
-def context_access(value):
+def context_access(value:int=0):
     """Calls context increment method with the value passed as an argument, returing value."""
 
     ctx_obj = get_context('context_object')
@@ -11,4 +11,3 @@ def context_access(value):
 def missing_context_obj():
 
     ctx_obj = get_context('missing_context_object')
-

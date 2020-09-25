@@ -12,6 +12,7 @@ that the separate thread on which the file watcher runs is stopped.
 import time
 import os
 import importlib.util
+import inspect
 import pytest
 
 from odin_sequencer import CommandSequenceManager, CommandSequenceError
@@ -97,6 +98,7 @@ def test_empty_manager(make_seq_manager):
     assert len(manager.provides) == 0
     assert len(manager.requires) == 0
     assert len(manager.context) == 0
+    assert len(manager.sequence_signatures) == 0
 
 
 def test_basic_manager_loaded(make_seq_manager):
@@ -105,10 +107,15 @@ def test_basic_manager_loaded(make_seq_manager):
     correct sequence functions.
     """
     manager = make_seq_manager('basic_sequences.py')
+    basic_return_value_seq_params = manager.sequence_signatures['basic_return_value'].parameters
 
     assert len(manager.modules) == 1
     assert len(manager.provides) == 1
     assert len(manager.requires) == 1
+    assert len(manager.sequence_signatures) == 3
+    assert len(basic_return_value_seq_params) == 1
+    assert 'value' in basic_return_value_seq_params
+    assert basic_return_value_seq_params['value'].default is inspect.Parameter.empty
     assert hasattr(manager, 'basic_read')
     assert hasattr(manager, 'basic_write')
 
@@ -632,6 +639,7 @@ def test_access_context_in_sequence(make_seq_manager, context_object):
     Test that accessing a context in a sequence works as as expected.
     """
     manager = make_seq_manager('context_data/context_sequences.py')
+    context_access_seq_params = manager.sequence_signatures['context_access'].parameters
     obj_name = 'context_object'
     manager.add_context(obj_name, context_object)
 
@@ -639,6 +647,11 @@ def test_access_context_in_sequence(make_seq_manager, context_object):
     return_val = manager.context_access(value)
 
     assert return_val == value + 1
+    assert len(manager.sequence_signatures) == 2
+    assert len(manager.sequence_signatures['missing_context_obj'].parameters) == 0
+    assert len(context_access_seq_params) == 1
+    assert 'value' in context_access_seq_params
+    assert context_access_seq_params['value'].default == 0
 
 
 def test_get_missing_context_object(make_seq_manager):
