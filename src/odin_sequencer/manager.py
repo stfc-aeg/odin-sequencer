@@ -14,6 +14,7 @@ import os
 
 from pathlib import Path
 from functools import partial
+from inspect import signature
 from .exceptions import CommandSequenceError
 from .watcher import FileWatcherFactory
 
@@ -43,6 +44,7 @@ class CommandSequenceManager:
         self.modules = {}
         self.requires = {}
         self.provides = {}
+        self.sequence_signatures = {}
         self.context = {}
         self.file_paths = {}
         self.auto_reload = False
@@ -124,6 +126,8 @@ class CommandSequenceManager:
                     seq_alias = seq_name + '_'
                     setattr(self, seq_alias, getattr(module, seq_name))
                     setattr(self, seq_name, partial(self.execute, seq_alias))
+                    # Extract the parameters and their types that the sequence accepts
+                    self.sequence_signatures[seq_name] = signature(getattr(module, seq_name))
                 except AttributeError:
                     raise CommandSequenceError(
                         "{} does not implement {} listed in its provided sequences".format(
