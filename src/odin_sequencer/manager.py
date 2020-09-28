@@ -220,6 +220,9 @@ class CommandSequenceManager:
             except (FileNotFoundError, OSError):
                 pass
 
+            for provided in self.provides[name]:
+                delattr(self, provided)
+
             del self.modules[name]
             del self.file_paths[name]
 
@@ -321,23 +324,29 @@ class CommandSequenceManager:
         :return: return value of called function
         """
         if self.auto_reload and self.file_watcher:
-            file_paths = []
+            self._handle_auto_reloading()
 
-            # Check the queue to see if it contains any modules that require reloading
-            while not self.file_watcher.modified_files_queue.empty():
-                file_path = self.file_watcher.modified_files_queue.get()
-                file_paths.append(file_path)
-
-            if file_paths:
-                self.file_watcher.remove_watch(file_paths)
-                self.reload(file_paths)
-
-        if not hasattr(self, sequence_name):
+        try:
+            return getattr(self, sequence_name)(*args, **kwargs)
+        except AttributeError:
             raise CommandSequenceError(
                 'Missing command sequence: {}'.format(sequence_name)
-                )
+            )
 
-        return getattr(self, sequence_name)(*args, **kwargs)
+    def _handle_auto_reloading(self):
+        """Reload the modules that are inside the queue."""
+        file_paths = []
+
+        # Check the queue to see if it contains any modules that require reloading
+        while not self.file_watcher.modified_files_queue.empty():
+            file_path = self.file_watcher.modified_files_queue.get()
+            file_paths.append(file_path)
+
+        if file_paths:
+            self.auto_reloading = True
+            self.file_watcher.remove_watch(file_paths)
+            self.reload(file_paths)
+            self.auto_reloading = False
 
     def add_context(self, name, obj):
         """Add an object to the manager context.
@@ -365,3 +374,24 @@ class CommandSequenceManager:
             raise CommandSequenceError('Manager context does not contain {}'.format(name))
 
         return self.context[name]
+
+    def __getattr__(self, name):
+        """Solves the problem with AttributeError being raised when a newly added module sequence
+        is programmatically called while auto-reload is enabled.
+
+        If a new sequence is added to a module while the auto-reload is enabled, an attribute of 
+        that sequence will not be added to the manager until the reload logic is not executed in
+        the execute function. As a result, programmatically calling the attribute for that sequence 
+        raises AttributeError. By deafult __getattr__ is called whenever a missing attribute is 
+        called, therefore the logic here attempts to reload modules that require reloading. 
+        AttributeError is raised if the sequence does not exist after reloading is attempted.
+
+        :param name: name of the missing attribute
+        """
+        if self.auto_reload and self.file_watcher:
+            self._handle_auto_reloading()
+
+        if not any(name in val for val in self.provides.values()):
+            raise AttributeError("Manager has no attribute '{}'".format(name))
+
+        return getattr(self, name)
