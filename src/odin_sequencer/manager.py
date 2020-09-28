@@ -343,10 +343,8 @@ class CommandSequenceManager:
             file_paths.append(file_path)
 
         if file_paths:
-            self.auto_reloading = True
             self.file_watcher.remove_watch(file_paths)
             self.reload(file_paths)
-            self.auto_reloading = False
 
     def add_context(self, name, obj):
         """Add an object to the manager context.
@@ -379,12 +377,13 @@ class CommandSequenceManager:
         """Solves the problem with AttributeError being raised when a newly added module sequence
         is programmatically called while auto-reload is enabled.
 
-        If a new sequence is added to a module while the auto-reload is enabled, an attribute of 
-        that sequence will not be added to the manager until the reload logic is not executed in
-        the execute function. As a result, programmatically calling the attribute for that sequence 
-        raises AttributeError. By deafult __getattr__ is called whenever a missing attribute is 
-        called, therefore the logic here attempts to reload modules that require reloading. 
-        AttributeError is raised if the sequence does not exist after reloading is attempted.
+        If a new sequence is added to a module while the auto-reload is enabled, an attribute
+        of that sequence will not be added to the manager until the reload logic is not executed
+        in the execute function. As a result, programmatically calling the attribute for that
+        sequence raises AttributeError. By deafult __getattr__ is called whenever a missing
+        attribute is called, therefore the logic here attempts to reload modules that require
+        reloading. AttributeError is raised if the sequence attribute does not exist after
+        reloading is attempted.
 
         :param name: name of the missing attribute
         """
