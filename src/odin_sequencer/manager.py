@@ -14,6 +14,7 @@ import os
 
 from pathlib import Path
 from functools import partial
+from inspect import signature
 from .exceptions import CommandSequenceError
 from .watcher import FileWatcherFactory
 
@@ -43,6 +44,7 @@ class CommandSequenceManager:
         self.modules = {}
         self.requires = {}
         self.provides = {}
+        self.sequences = {}
         self.context = {}
         self.file_paths = {}
         self.auto_reload = False
@@ -122,8 +124,10 @@ class CommandSequenceManager:
             for seq_name in provides:
                 try:
                     seq_alias = seq_name + '_'
-                    setattr(self, seq_alias, getattr(module, seq_name))
+                    seq = getattr(module, seq_name)
+                    setattr(self, seq_alias, seq)
                     setattr(self, seq_name, partial(self.execute, seq_alias))
+                    self.sequences[seq_name] = self._build_sequence_parameter_info(seq)
                 except AttributeError:
                     raise CommandSequenceError(
                         "{} does not implement {} listed in its provided sequences".format(
@@ -154,6 +158,23 @@ class CommandSequenceManager:
         # Add the module(s) to the watch list if auto reloading is enabled
         if self.auto_reload and self.file_watcher:
             self.file_watcher.add_watch(path_or_paths)
+
+    @staticmethod
+    def _build_sequence_parameter_info(sequence):
+        """This method builds a dictionary that contains the parameter
+        names that a sequence accepts, and their type and default value.
+
+        :param sequence: the sequence to extract and build information for
+        :return: a dictionary that contains information about the parameters that the sequence accepts
+        """
+
+        return {
+            param.name: {
+                "value": param.default if param.default is not inspect.Parameter.empty else None,
+                "default": param.default if param.default is not inspect.Parameter.empty else None,
+                "type": param.annotation.__name__ if param.annotation.__name__ != '_empty' else None
+            } for param in signature(sequence).parameters.values()
+        }
 
     def reload(self, file_paths=None, module_names=None, resolve=True):
         """Reload currently loaded modules.
@@ -222,6 +243,7 @@ class CommandSequenceManager:
 
             for provided in self.provides[name]:
                 delattr(self, provided)
+                del self.sequences[provided]
 
             del self.modules[name]
             del self.file_paths[name]
