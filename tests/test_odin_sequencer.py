@@ -516,8 +516,10 @@ def test_execute_when_module_is_modified_while_auto_reload_enabled(shared_datadi
     _await_queue_size(manager, 1)
 
     message = manager.execute('generate_message')
+    basic_seq_value = manager.basic_sequence(0)
 
     assert message == 'Message: Hello World'
+    assert basic_seq_value == 0
 
     manager.disable_auto_reload()
 
