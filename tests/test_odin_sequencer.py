@@ -196,6 +196,21 @@ def test_load_with_missing_directory(shared_datadir, make_seq_manager):
         make_seq_manager(directory_path)
 
 
+def test_load_with_sequence_that_has_no_paramater_default_value(make_seq_manager):
+    """
+    Test that loading a module file that has a sequence with no default paramater
+    value raises an error appropriately.
+    """
+    file_name = 'missing_default_param_value.py'
+    sqe_name = 'basic_seq'
+    param_name = 'val'
+    with pytest.raises(
+            CommandSequenceError, match="'{}' parameter in '{}' sequence does not have a default "
+                                        "value".format(param_name, sqe_name)
+    ):
+        make_seq_manager(file_name)
+
+
 def test_explicit_module_load(make_seq_manager, create_paths):
     """
     Test that a module file is loaded into the manager when the load function
