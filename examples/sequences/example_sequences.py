@@ -1,7 +1,7 @@
 requires = ['spi_commands']
 provides = ['test_sequence', 'another_sequence']
 
-def test_sequence(a_val:int=123, b:str='hello'):
+def test_sequence(a_val=123, b='hello'):
 
     print("Running test sequence")
 
@@ -21,6 +21,6 @@ def test_sequence(a_val:int=123, b:str='hello'):
     reg_val += 1
     dev.write_reg(0x33, reg_val)
 
-def another_sequence(c_val:bool=False, d=1.234):
+def another_sequence(c_val=False, d=1.234):
 
     pass
