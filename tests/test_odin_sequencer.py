@@ -12,7 +12,6 @@ that the separate thread on which the file watcher runs is stopped.
 import time
 import os
 import importlib.util
-import inspect
 import pytest
 
 from odin_sequencer import CommandSequenceManager, CommandSequenceError
@@ -114,9 +113,9 @@ def test_basic_manager_loaded(make_seq_manager):
     assert len(manager.requires) == 1
     assert len(manager.sequences) == 3
     assert len(basic_return_value_seq_params) == 1
-    assert basic_return_value_seq_params['value']['default'] is None
-    assert basic_return_value_seq_params['value']['type'] is None
-    assert basic_return_value_seq_params['value']['value'] is None
+    assert basic_return_value_seq_params['value']['default'] == 0
+    assert basic_return_value_seq_params['value']['type'] == 'int'
+    assert basic_return_value_seq_params['value']['value'] == 0
     assert hasattr(manager, 'basic_read')
     assert hasattr(manager, 'basic_write')
 
@@ -516,10 +515,7 @@ def test_execute_when_module_is_modified_while_auto_reload_enabled(shared_datadi
     _await_queue_size(manager, 1)
 
     message = manager.execute('generate_message')
-    basic_seq_value = manager.basic_sequence(0)
-
     assert message == 'Message: Hello World'
-    assert basic_seq_value == 0
 
     manager.disable_auto_reload()
 
@@ -583,6 +579,25 @@ def test_attribute_func_when_module_is_modified_while_auto_reload_enabled(shared
     message = manager.generate_message()
 
     assert message == 'Message: Hello World'
+
+    manager.disable_auto_reload()
+
+
+def test_attribute_func_when_module_sequence_is_added_auto_reload_enabled(shared_datadir,
+                                                                          make_seq_manager,
+                                                                          create_tmp_module_files):
+    """
+    Test that a module that has been modified to provide a new sequence while auto reloading is
+    enabled is reloaded when the newly added sequence is called through the manager attribute.
+    """
+    tmp_files = create_tmp_module_files
+    manager = make_seq_manager(tmp_files)
+    manager.enable_auto_reload()
+    modify_test_reload_module_file(shared_datadir)
+    _await_queue_size(manager, 1)
+
+    basic_seq_value = manager.basic_sequence(1)
+    assert basic_seq_value == 1
 
     manager.disable_auto_reload()
 
