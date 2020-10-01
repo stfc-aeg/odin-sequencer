@@ -20,7 +20,7 @@ def main():
     csm.reload(examples_dir.joinpath('dependencies/a.py'))
 
     csm.a_three(5.678)
-    csm.execute('a_three', 1.234, wibble='wobble')
+    csm.execute('a_three', arg=1.234, wibble='wobble')
 
 if __name__ == '__main__':
 
