@@ -17,9 +17,12 @@ def modify_test_reload_module_file(shared_datadir):
     time.sleep(0.1)
     module = shared_datadir.joinpath('test_reload.py')
 
-    module.write_text("""provides = ['get_message']
+    module.write_text("""provides = ['get_message', 'basic_sequence']
 def get_message():
-    return 'Hello World'""")
+    return 'Hello World'
+ 
+def basic_sequence(value=0):
+    return value""")
 
 
 def modify_with_dependency_module_file(shared_datadir):

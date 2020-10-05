@@ -97,6 +97,7 @@ def test_empty_manager(make_seq_manager):
     assert len(manager.provides) == 0
     assert len(manager.requires) == 0
     assert len(manager.context) == 0
+    assert len(manager.sequences) == 0
 
 
 def test_basic_manager_loaded(make_seq_manager):
@@ -105,10 +106,16 @@ def test_basic_manager_loaded(make_seq_manager):
     correct sequence functions.
     """
     manager = make_seq_manager('basic_sequences.py')
+    basic_return_value_seq_params = manager.sequences['basic_return_value']
 
     assert len(manager.modules) == 1
     assert len(manager.provides) == 1
     assert len(manager.requires) == 1
+    assert len(manager.sequences) == 3
+    assert len(basic_return_value_seq_params) == 1
+    assert basic_return_value_seq_params['value']['default'] == 0
+    assert basic_return_value_seq_params['value']['type'] == 'int'
+    assert basic_return_value_seq_params['value']['value'] == 0
     assert hasattr(manager, 'basic_read')
     assert hasattr(manager, 'basic_write')
 
@@ -187,6 +194,21 @@ def test_load_with_missing_directory(shared_datadir, make_seq_manager):
             CommandSequenceError, match='Sequence directory {} not found'.format(directory_path)
     ):
         make_seq_manager(directory_path)
+
+
+def test_load_with_sequence_that_has_no_paramater_default_value(make_seq_manager):
+    """
+    Test that loading a module file that has a sequence with no default paramater
+    value raises an error appropriately.
+    """
+    file_name = 'missing_default_param_value.py'
+    sqe_name = 'basic_seq'
+    param_name = 'val'
+    with pytest.raises(
+            CommandSequenceError, match="'{}' parameter in '{}' sequence does not have a default "
+                                        "value".format(param_name, sqe_name)
+    ):
+        make_seq_manager(file_name)
 
 
 def test_explicit_module_load(make_seq_manager, create_paths):
@@ -508,7 +530,6 @@ def test_execute_when_module_is_modified_while_auto_reload_enabled(shared_datadi
     _await_queue_size(manager, 1)
 
     message = manager.execute('generate_message')
-
     assert message == 'Message: Hello World'
 
     manager.disable_auto_reload()
@@ -577,6 +598,25 @@ def test_attribute_func_when_module_is_modified_while_auto_reload_enabled(shared
     manager.disable_auto_reload()
 
 
+def test_attribute_func_when_module_sequence_is_added_auto_reload_enabled(shared_datadir,
+                                                                          make_seq_manager,
+                                                                          create_tmp_module_files):
+    """
+    Test that a module that has been modified to provide a new sequence while auto reloading is
+    enabled is reloaded when the newly added sequence is called through the manager attribute.
+    """
+    tmp_files = create_tmp_module_files
+    manager = make_seq_manager(tmp_files)
+    manager.enable_auto_reload()
+    modify_test_reload_module_file(shared_datadir)
+    _await_queue_size(manager, 1)
+
+    basic_seq_value = manager.basic_sequence(1)
+    assert basic_seq_value == 1
+
+    manager.disable_auto_reload()
+
+
 def test_attribute_func_when_module_is_modified_while_auto_reload_disabled(shared_datadir,
                                                                            make_seq_manager,
                                                                            create_tmp_module_files):
@@ -632,6 +672,7 @@ def test_access_context_in_sequence(make_seq_manager, context_object):
     Test that accessing a context in a sequence works as as expected.
     """
     manager = make_seq_manager('context_data/context_sequences.py')
+    context_access_seq_params = manager.sequences['context_access']
     obj_name = 'context_object'
     manager.add_context(obj_name, context_object)
 
@@ -639,6 +680,12 @@ def test_access_context_in_sequence(make_seq_manager, context_object):
     return_val = manager.context_access(value)
 
     assert return_val == value + 1
+    assert len(manager.sequences) == 2
+    assert len(manager.sequences['missing_context_obj']) == 0
+    assert len(context_access_seq_params) == 1
+    assert context_access_seq_params['value']['default'] == 0
+    assert context_access_seq_params['value']['type'] == 'int'
+    assert context_access_seq_params['value']['value'] == 0
 
 
 def test_get_missing_context_object(make_seq_manager):

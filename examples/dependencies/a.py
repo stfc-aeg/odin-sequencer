@@ -10,5 +10,5 @@ def a_two():
     print("a_two")
     d_two()
 
-def a_three(arg, wibble="hmm"):
+def a_three(arg=0, wibble="hmm"):
     print("a_three: arg={} wibble={}".format(arg, wibble))

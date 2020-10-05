@@ -14,6 +14,7 @@ import os
 
 from pathlib import Path
 from functools import partial
+from inspect import signature
 from .exceptions import CommandSequenceError
 from .watcher import FileWatcherFactory
 
@@ -43,6 +44,7 @@ class CommandSequenceManager:
         self.modules = {}
         self.requires = {}
         self.provides = {}
+        self.sequences = {}
         self.context = {}
         self.file_paths = {}
         self.auto_reload = False
@@ -122,13 +124,23 @@ class CommandSequenceManager:
             for seq_name in provides:
                 try:
                     seq_alias = seq_name + '_'
-                    setattr(self, seq_alias, getattr(module, seq_name))
+                    seq = getattr(module, seq_name)
+                    setattr(self, seq_alias, seq)
                     setattr(self, seq_name, partial(self.execute, seq_alias))
                 except AttributeError:
                     raise CommandSequenceError(
                         "{} does not implement {} listed in its provided sequences".format(
                             module_name, seq_name)
                     )
+
+                seq_params = signature(seq).parameters.values()
+                for param in seq_params:
+                    if param.default is inspect.Parameter.empty or param.default is None:
+                        raise CommandSequenceError(
+                            "'{}' parameter in '{}' sequence does not have a default value".format(
+                                param.name, seq_name)
+                        )
+                self.sequences[seq_name] = self._build_sequence_parameter_info(seq_params)
 
             # If the module declares what dependencies it requires, use that, otherwise assume there
             # are none
@@ -154,6 +166,23 @@ class CommandSequenceManager:
         # Add the module(s) to the watch list if auto reloading is enabled
         if self.auto_reload and self.file_watcher:
             self.file_watcher.add_watch(path_or_paths)
+
+    @staticmethod
+    def _build_sequence_parameter_info(params):
+        """This method builds a dictionary that contains the parameter
+        names that a sequence accepts, and their type and default value.
+
+        :param params: the parameter(s) to extract and build information for
+        :return: a dictionary with information about the parameters that the sequence accepts
+        """
+
+        return {
+            param.name: {
+                "value": param.default,
+                "default": param.default,
+                "type": type(param.default).__name__
+            } for param in params
+        }
 
     def reload(self, file_paths=None, module_names=None, resolve=True):
         """Reload currently loaded modules.
@@ -219,6 +248,10 @@ class CommandSequenceManager:
                 os.remove(importlib.util.cache_from_source(self.file_paths[name]))
             except (FileNotFoundError, OSError):
                 pass
+
+            for provided in self.provides[name]:
+                delattr(self, provided)
+                del self.sequences[provided]
 
             del self.modules[name]
             del self.file_paths[name]
@@ -321,23 +354,27 @@ class CommandSequenceManager:
         :return: return value of called function
         """
         if self.auto_reload and self.file_watcher:
-            file_paths = []
+            self._handle_auto_reloading()
 
-            # Check the queue to see if it contains any modules that require reloading
-            while not self.file_watcher.modified_files_queue.empty():
-                file_path = self.file_watcher.modified_files_queue.get()
-                file_paths.append(file_path)
-
-            if file_paths:
-                self.file_watcher.remove_watch(file_paths)
-                self.reload(file_paths)
-
-        if not hasattr(self, sequence_name):
+        try:
+            return getattr(self, sequence_name)(*args, **kwargs)
+        except AttributeError:
             raise CommandSequenceError(
                 'Missing command sequence: {}'.format(sequence_name)
-                )
+            )
 
-        return getattr(self, sequence_name)(*args, **kwargs)
+    def _handle_auto_reloading(self):
+        """Reload the modules that are inside the queue."""
+        file_paths = []
+
+        # Check the queue to see if it contains any modules that require reloading
+        while not self.file_watcher.modified_files_queue.empty():
+            file_path = self.file_watcher.modified_files_queue.get()
+            file_paths.append(file_path)
+
+        if file_paths:
+            self.file_watcher.remove_watch(file_paths)
+            self.reload(file_paths)
 
     def add_context(self, name, obj):
         """Add an object to the manager context.
@@ -365,3 +402,25 @@ class CommandSequenceManager:
             raise CommandSequenceError('Manager context does not contain {}'.format(name))
 
         return self.context[name]
+
+    def __getattr__(self, name):
+        """Solves the problem with AttributeError being raised when a newly added module sequence
+        is programmatically called while auto-reload is enabled.
+
+        If a new sequence is added to a module while the auto-reload is enabled, an attribute
+        of that sequence will not be added to the manager until the reload logic is not executed
+        in the execute function. As a result, programmatically calling the attribute for that
+        sequence raises AttributeError. By deafult __getattr__ is called whenever a missing
+        attribute is called, therefore the logic here attempts to reload modules that require
+        reloading. AttributeError is raised if the sequence attribute does not exist after
+        reloading is attempted.
+
+        :param name: name of the missing attribute
+        """
+        if self.auto_reload and self.file_watcher:
+            self._handle_auto_reloading()
+
+        if not any(name in val for val in self.provides.values()):
+            raise AttributeError("Manager has no attribute '{}'".format(name))
+
+        return getattr(self, name)

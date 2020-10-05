@@ -11,6 +11,6 @@ def basic_write():
 
     print("Basic write")
 
-def basic_return_value(value):
+def basic_return_value(value=0):
 
     return value
