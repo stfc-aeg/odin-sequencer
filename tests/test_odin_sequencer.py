@@ -196,17 +196,78 @@ def test_load_with_missing_directory(shared_datadir, make_seq_manager):
         make_seq_manager(directory_path)
 
 
+def test_load_with_already_registered_sequence_name(make_seq_manager, create_paths):
+    """ Test that loading a module file that has a sequence name that is the same as one already
+    loaded, raises an error appropriately.
+    """
+    module_name = 'basic_sequences'
+    seq_name = 'basic_read'
+    manager = make_seq_manager(module_name + '.py')
+
+    with pytest.raises(
+            CommandSequenceError, match="Unable to load sequence '{}' from module '{}' as "
+                                        "a sequence with the same name has already being "
+                                        "registered".format(seq_name, module_name)
+    ):
+        manager.load(create_paths(module_name + '.py'))
+
+
 def test_load_with_sequence_that_has_no_paramater_default_value(make_seq_manager):
     """
     Test that loading a module file that has a sequence with no default paramater
     value raises an error appropriately.
     """
     file_name = 'missing_default_param_value.py'
-    sqe_name = 'basic_seq'
+    seq_name = 'basic_seq'
     param_name = 'val'
     with pytest.raises(
             CommandSequenceError, match="'{}' parameter in '{}' sequence does not have a default "
-                                        "value".format(param_name, sqe_name)
+                                        "value".format(param_name, seq_name)
+    ):
+        make_seq_manager(file_name)
+
+
+def test_load_with_sequence_that_has_list_parameter_with_no_elements(make_seq_manager):
+    """
+    Test that loading a module file that has a sequence with a list parameter which is
+    empty, raises an error appropriately.
+    """
+    file_name = 'empty_list_param.py'
+    seq_name = 'basic_seq'
+    param_name = 'val'
+    with pytest.raises(
+            CommandSequenceError, match="'{}' list parameter in '{}' sequence is empty".format(
+                param_name, seq_name)
+    ):
+        make_seq_manager(file_name)
+
+
+def test_load_with_sequence_that_has_list_parameter_with_list_element(make_seq_manager):
+    """
+    Test that loading a module file that has a sequence with a list parameter which
+    contains a list element, raises an error appropriately.
+    """
+    file_name = 'list_param_contains_list_element.py'
+    seq_name = 'basic_seq'
+    param_name = 'val'
+    with pytest.raises(
+            CommandSequenceError, match="'{}' list parameter in '{}' sequence contains a "
+                                        "list element".format(param_name, seq_name)
+    ):
+        make_seq_manager(file_name)
+
+
+def test_load_with_sequence_that_has_list_parameter_with_heterogeneous_elements(make_seq_manager):
+    """
+    Test that loading a module file that has a sequence with a list parameter which
+    contains elements of different types, raises an error appropriately.
+    """
+    file_name = 'list_param_contains_heterogeneous_elements.py'
+    seq_name = 'basic_seq'
+    param_name = 'val'
+    with pytest.raises(
+            CommandSequenceError, match="'{}' list parameter in '{}' sequence contains "
+                                        "elements of different types".format(param_name, seq_name)
     ):
         make_seq_manager(file_name)
 
@@ -611,8 +672,9 @@ def test_attribute_func_when_module_sequence_is_added_auto_reload_enabled(shared
     modify_test_reload_module_file(shared_datadir)
     _await_queue_size(manager, 1)
 
-    basic_seq_value = manager.basic_sequence(1)
-    assert basic_seq_value == 1
+    basic_seq_value = manager.basic_sequence([0, 1])
+    assert basic_seq_value == [0, 1]
+    assert manager.sequences['basic_sequence']['value']['type'] == 'list-int'
 
     manager.disable_auto_reload()
 

@@ -21,7 +21,7 @@ def modify_test_reload_module_file(shared_datadir):
 def get_message():
     return 'Hello World'
  
-def basic_sequence(value=0):
+def basic_sequence(value=[1]):
     return value""")
 
 
