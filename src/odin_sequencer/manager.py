@@ -116,12 +116,12 @@ class CommandSequenceManager:
             else:
                 provides = [name for name, _ in inspect.getmembers(module, inspect.isfunction)]
 
-            # Set the provided functions as attributes of this manager, so they are available
-            # to be used by calling code. A reference to a partial function is set which calls
-            # the execute function instead of the sequence function directly. This ensures
-            # that modules get reloaded when auto reloading is enabled and the functions
-            # are directly executed as callable functions from the manager itself.
             for seq_name in provides:
+                # Set the provided functions as attributes of this manager, so they are available
+                # to be used by calling code. A reference to a partial function is set which calls
+                # the execute function instead of the sequence function directly. This ensures
+                # that modules get reloaded when auto reloading is enabled and the functions
+                # are directly executed as callable functions from the manager itself.
                 try:
                     seq_alias = seq_name + '_'
                     seq = getattr(module, seq_name)
@@ -133,13 +133,9 @@ class CommandSequenceManager:
                             module_name, seq_name)
                     )
 
-                seq_params = signature(seq).parameters.values()
-                for param in seq_params:
-                    if param.default is inspect.Parameter.empty or param.default is None:
-                        raise CommandSequenceError(
-                            "'{}' parameter in '{}' sequence does not have a default value".format(
-                                param.name, seq_name)
-                        )
+                # Extract information about the sequence parameters
+                seq_params = seq_params = signature(seq).parameters.values()
+                self._validate_sequence_parameters(seq_name, seq_params)
                 self.sequences[seq_name] = self._build_sequence_parameter_info(seq_params)
 
             # If the module declares what dependencies it requires, use that, otherwise assume there
@@ -166,6 +162,40 @@ class CommandSequenceManager:
         # Add the module(s) to the watch list if auto reloading is enabled
         if self.auto_reload and self.file_watcher:
             self.file_watcher.add_watch(path_or_paths)
+
+    def _validate_sequence_parameters(self, seq_name, seq_params):
+        """ Validate the parameter(s) of a sequence.
+
+        This method validates the parameters of a sequence, if it has any, by checking whether
+        they have a default value. It does additional validation if the parameter is of type
+        list. It raises an exception if no default value is provided for the parameter or if
+        it is None.
+
+        :param seq_name: the name of the sequence whose parameters are validated
+        :param seq_params: list of sequence paramaters that need to be validated
+        """
+        for param in seq_params:
+            if param.default is inspect.Parameter.empty or param.default is None:
+                raise CommandSequenceError(
+                    "'{}' parameter in '{}' sequence does not have a default value".format(
+                        param.name, seq_name)
+                )
+
+            if type(param.default).__name__ == 'list' and not self._is_list_homogeneous(
+                    param.default):
+                raise CommandSequenceError(
+                    "'{}' list parameter in '{}' sequence contains elements of different "
+                    "types".format(param.name, seq_name)
+                )
+
+    @staticmethod
+    def _is_list_homogeneous(list_val):
+        """ This method checks whether the elements in a list are of the same type.
+
+        param list_val: the list that needs to be checked
+        :return: True if the list are of the same type, otherwise False
+        """
+        return not any(not isinstance(list_val[0], type(element)) for element in list_val)
 
     @staticmethod
     def _build_sequence_parameter_info(params):
