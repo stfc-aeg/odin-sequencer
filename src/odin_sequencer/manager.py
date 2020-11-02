@@ -44,7 +44,7 @@ class CommandSequenceManager:
         self.modules = {}
         self.requires = {}
         self.provides = {}
-        self.sequences = {}
+        self.sequence_modules = {}
         self.context = {}
         self.file_paths = {}
         self.auto_reload = False
@@ -121,6 +121,7 @@ class CommandSequenceManager:
             # the execute function instead of the sequence function directly. This ensures
             # that modules get reloaded when auto reloading is enabled and the functions
             # are directly executed as callable functions from the manager itself.
+            sequences = {}
             for seq_name in provides:
                 try:
                     seq_alias = seq_name + '_'
@@ -140,7 +141,7 @@ class CommandSequenceManager:
                             "'{}' parameter in '{}' sequence does not have a default value".format(
                                 param.name, seq_name)
                         )
-                self.sequences[seq_name] = self._build_sequence_parameter_info(seq_params)
+                sequences[seq_name] = self._build_sequence_parameter_info(seq_params)
 
             # If the module declares what dependencies it requires, use that, otherwise assume there
             # are none
@@ -157,6 +158,7 @@ class CommandSequenceManager:
             self.modules[module_name] = module
             self.provides[module_name] = provides
             self.requires[module_name] = requires
+            self.sequence_modules[module_name] = sequences
             self.file_paths[module_name] = file_path
 
         # If requested, resolve dependencies for currently loaded modules
@@ -251,9 +253,11 @@ class CommandSequenceManager:
 
             for provided in self.provides[name]:
                 delattr(self, provided)
-                del self.sequences[provided]
 
             del self.modules[name]
+            del self.provides[name]
+            del self.requires[name]
+            del self.sequence_modules[name]
             del self.file_paths[name]
 
     def enable_auto_reload(self):
