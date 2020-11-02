@@ -226,7 +226,7 @@ class CommandSequenceManager:
         param list_val: the list that needs to be checked
         :return: True if the list are of the same type, otherwise False
         """
-        return not any(not isinstance(list_val[0], type(element)) for element in list_val)
+        return not any(not type(element) == type(list_val[0]) for element in list_val)
 
     def _build_sequence_parameter_info(self, params):
         """This method builds a dictionary that contains the parameter
