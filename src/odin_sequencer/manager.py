@@ -117,6 +117,13 @@ class CommandSequenceManager:
                 provides = [name for name, _ in inspect.getmembers(module, inspect.isfunction)]
 
             for seq_name in provides:
+                # Do not load the sequence if one with the same name has already been registered
+                if any(seq_name in val for val in self.provides.values()):
+                    raise CommandSequenceError(
+                        "Unable to load sequence '{}' from module '{}' as a sequence with the "
+                        "same name has already being registered".format(seq_name, module_name)
+                    )
+
                 # Set the provided functions as attributes of this manager, so they are available
                 # to be used by calling code. A reference to a partial function is set which calls
                 # the execute function instead of the sequence function directly. This ensures
@@ -314,6 +321,8 @@ class CommandSequenceManager:
                 del self.sequences[provided]
 
             del self.modules[name]
+            del self.provides[name]
+            del self.requires[name]
             del self.file_paths[name]
 
     def enable_auto_reload(self):
