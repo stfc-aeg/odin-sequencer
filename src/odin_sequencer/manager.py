@@ -221,22 +221,28 @@ class CommandSequenceManager:
         """
         return not any(not isinstance(list_val[0], type(element)) for element in list_val)
 
-    @staticmethod
-    def _build_sequence_parameter_info(params):
+    def _build_sequence_parameter_info(self, params):
         """This method builds a dictionary that contains the parameter
         names that a sequence accepts, and their type and default value.
 
         :param params: the parameter(s) to extract and build information for
         :return: a dictionary with information about the parameters that the sequence accepts
         """
-
         return {
             param.name: {
                 "value": param.default,
                 "default": param.default,
-                "type": type(param.default).__name__
+                "type": self._get_parameter_type(param.default)
             } for param in params
         }
+
+    @staticmethod
+    def _get_parameter_type(param_default_val):
+        param_type = type(param_default_val).__name__
+        if param_type == 'list':
+            param_type = 'list-{}'.format(type(param_default_val[0]).__name__)
+
+        return param_type
 
     def reload(self, file_paths=None, module_names=None, resolve=True):
         """Reload currently loaded modules.
