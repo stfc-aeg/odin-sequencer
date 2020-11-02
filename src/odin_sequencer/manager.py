@@ -47,8 +47,9 @@ class CommandSequenceManager:
         self.sequence_modules = {}
         self.context = {}
         self.file_paths = {}
+        self.module_watcher = None
+        self.module_watching = False
         self.auto_reload = False
-        self.file_watcher = None
 
         # If one or more files have been specified, attempt to load and resolve them
         if path_or_paths:
@@ -161,13 +162,13 @@ class CommandSequenceManager:
             self.sequence_modules[module_name] = sequences
             self.file_paths[module_name] = file_path
 
+            # Add the module to the watch list if module watching is enabled
+            if self.module_watching and self.module_watcher:
+                self.module_watcher.add_watch(file_path)
+
         # If requested, resolve dependencies for currently loaded modules
         if resolve:
             self.resolve()
-
-        # Add the module(s) to the watch list if auto reloading is enabled
-        if self.auto_reload and self.file_watcher:
-            self.file_watcher.add_watch(path_or_paths)
 
     @staticmethod
     def _build_sequence_parameter_info(params):
@@ -233,6 +234,8 @@ class CommandSequenceManager:
         if module_names is None and file_paths is None:
             file_paths = list(self.file_paths.values())
 
+        if self.module_watching:
+            self.module_watcher.remove_watch(file_paths)
         self._unload([file_path.stem for file_path in file_paths])
 
         self.load(file_paths, resolve)
@@ -260,39 +263,100 @@ class CommandSequenceManager:
             del self.sequence_modules[name]
             del self.file_paths[name]
 
-    def enable_auto_reload(self):
-        """ Enable auto reloading of modules currently loaded in the manager.
+    def enable_module_watching(self):
+        """ Enable watching for modifications in all modules that are currently loaded in the
+        manager.
 
-        This method enables auto reloading of all the modules that are currently loaded
-        in the manager. A file watcher is created using the factory class and the paths
-        to all the loaded modules are passed to the file watcher so that it can watch
-        the modules for any modifications. Auto reloading is re-enabled and the already
-        created file watcher is reused if auto reloading is disabled when this function
-        is called.
+        This method enables watching for modifications in all the modules that are loaded in the
+        manager. A module watcher is created using the factory class and the paths to all the
+        loaded modules are passed to it so that it can watch the modules and detect any
+        modifications. The watcher is re-enabled and the already created module watcher is reused
+        if the watcher is disabled but was previously enabled. Exceptions are raised if enabling of
+        module watching is attempted while enabled, or disabling while disabled.
         """
-        if not self.auto_reload:
-            if not self.file_watcher:
-                self.file_watcher = FileWatcherFactory.create_file_watcher(
-                    path_or_paths=list(self.file_paths.values()))
-            else:
-                self._re_enable_auto_reload()
+        if not self.modules:
+            raise CommandSequenceError('Cannot enable module watching when no modules are loaded')
 
-            self.auto_reload = True
+        if not self.module_watcher:
+            self.module_watcher = FileWatcherFactory.create_file_watcher(
+                path_or_paths=list(self.file_paths.values()))
+        else:
+            self.module_watcher.add_watch(list(self.file_paths.values()))
+            try:
+                self.module_watcher.run()
+            except CommandSequenceError:
+                raise CommandSequenceError('Module watching has already been enabled')
 
-    def _re_enable_auto_reload(self):
-        """Re-enables the auto reloading mechanism"""
-        self.file_watcher.add_watch(list(self.file_paths.values()))
-        self.file_watcher.run()
+        self.module_watching = True
 
-    def disable_auto_reload(self):
-        """ Disable auto reloading of modules currently loaded in the manager.
+    def disable_module_watching(self):
+        """ Disable the module watcher for all modules that are currently loaded in the manager.
 
-        This method disabled auto reloading of all the modules that are currently loaded
-        in the manager.
+        This method disables the watcher so that it will no longer watch for modifications in
+        all the modules that are currently loaded in the manager. An exception is raised if
+        disabling of the watcher is attempted while it is disabled or while it has not been
+        instantiated at all.
         """
-        if self.file_watcher and self.auto_reload:
-            self.file_watcher.stop()
-            self.auto_reload = False
+        try:
+            self.module_watcher.stop()
+            self.module_watching = False
+        except (AttributeError, CommandSequenceError):
+            raise CommandSequenceError(
+                'Module watching cannot be disabled as it has not been enabled')
+
+    def module_modifications_detected(self):
+        """ Check if modifications of modules were detected or not.
+
+        :return: True if modifications were detected, otherwise False
+        """
+        try:
+            return not self.module_watcher.modified_files_queue.empty()
+        except AttributeError:
+            raise CommandSequenceError('Cannot check if modifications were detected because a ' +
+                                       'module watcher has not been created')
+
+    def get_modified_module_paths(self):
+        """ Get a list of paths of the modules that were modified.
+
+        :return: a list of paths to the modified modules
+        """
+        if not self.module_watcher:
+            raise CommandSequenceError('Cannot get modified module paths because a module ' +
+                                       'watcher has not been created')
+
+        paths = []
+        while not self.module_watcher.modified_files_queue.empty():
+            path = self.module_watcher.modified_files_queue.get()
+            paths.append(path)
+
+        return paths
+
+    def set_auto_reload(self, enabled=True):
+        """ Disable/ enable auto reloading of modules currently loaded in the manager.
+
+        This method disables/ enables auto reloading of all the modules that are
+        currently loaded in the manager. The auto reloading is not done automatically,
+        but rather on demand inside the execute function before a sequence is executed.
+
+        :param enabled: Enables auto reload if True, or disables it otherwise (default True)
+        """
+
+        if enabled:
+            if self.auto_reload:
+                raise CommandSequenceError('Auto reloading has already been enabled')
+
+            if not self.module_watching:
+                try:
+                    self.enable_module_watching()
+                except CommandSequenceError as error:
+                    raise CommandSequenceError(
+                        'Cannot enable auto reloading due to: {}'.format(error))
+        else:
+            if not self.auto_reload:
+                raise CommandSequenceError(
+                    'Auto reloading cannot be disabled as it has not been enabled')
+
+        self.auto_reload = enabled
 
     @staticmethod
     def _retrieve_directory_files(directory_path):
@@ -357,8 +421,10 @@ class CommandSequenceManager:
         :param *kwargs: variable list of keyword arguments to pass to function
         :return: return value of called function
         """
-        if self.auto_reload and self.file_watcher:
-            self._handle_auto_reloading()
+        if self.auto_reload and self.module_modifications_detected:
+            modified_module_paths = self.get_modified_module_paths()
+            if modified_module_paths:
+                self.reload(modified_module_paths)
 
         try:
             return getattr(self, sequence_name)(*args, **kwargs)
@@ -366,19 +432,6 @@ class CommandSequenceManager:
             raise CommandSequenceError(
                 'Missing command sequence: {}'.format(sequence_name)
             )
-
-    def _handle_auto_reloading(self):
-        """Reload the modules that are inside the queue."""
-        file_paths = []
-
-        # Check the queue to see if it contains any modules that require reloading
-        while not self.file_watcher.modified_files_queue.empty():
-            file_path = self.file_watcher.modified_files_queue.get()
-            file_paths.append(file_path)
-
-        if file_paths:
-            self.file_watcher.remove_watch(file_paths)
-            self.reload(file_paths)
 
     def add_context(self, name, obj):
         """Add an object to the manager context.
@@ -421,8 +474,10 @@ class CommandSequenceManager:
 
         :param name: name of the missing attribute
         """
-        if self.auto_reload and self.file_watcher:
-            self._handle_auto_reloading()
+        if self.auto_reload and self.module_modifications_detected:
+            modified_module_paths = self.get_modified_module_paths()
+            if modified_module_paths:
+                self.reload(modified_module_paths)
 
         if not any(name in val for val in self.provides.values()):
             raise AttributeError("Manager has no attribute '{}'".format(name))
