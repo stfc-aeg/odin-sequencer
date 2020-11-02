@@ -181,12 +181,36 @@ class CommandSequenceManager:
                         param.name, seq_name)
                 )
 
-            if type(param.default).__name__ == 'list' and not self._is_list_homogeneous(
-                    param.default):
-                raise CommandSequenceError(
-                    "'{}' list parameter in '{}' sequence contains elements of different "
-                    "types".format(param.name, seq_name)
+            if type(param.default).__name__ == 'list':
+                self._validate_list_parameter(seq_name, param)
+
+    def _validate_list_parameter(self, seq_name, param):
+        """ Validate a list parameter of a sequence.
+
+        This method validates a list parameter of a sequence and ensures that it is not empty,
+        does not contain a list element or elements of different types. It raises exceptions if
+        any of these validations fail.
+
+        :param param: the list parameter that needs to be validated
+        :param seq_name: the name of the sequence to which the list parameter belongs to
+        """
+        if len(param.default) == 0:
+            raise CommandSequenceError(
+                "'{}' list parameter in '{}' sequence is empty".format(param.name, seq_name)
+            )
+
+        if any(isinstance(element, list) for element in param.default):
+            raise CommandSequenceError(
+                "'{}' list parameter in '{}' sequence contains a list element".format(
+                    param.name, seq_name
                 )
+            )
+
+        if not self._is_list_homogeneous(param.default):
+            raise CommandSequenceError(
+                "'{}' list parameter in '{}' sequence contains elements of different "
+                "types".format(param.name, seq_name)
+            )
 
     @staticmethod
     def _is_list_homogeneous(list_val):
