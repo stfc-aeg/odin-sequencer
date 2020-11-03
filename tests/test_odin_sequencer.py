@@ -5,8 +5,8 @@
 Some tests use the was_file_modified or _await_queue_size method to ensure that
 a file was modified or that the file watcher, which runs in a separate thread,
 detects and puts details of the modified files into the queue before the assertions
-happen. Some tests also disable the auto reloading if it has been enabled to ensure
-that the separate thread on which the file watcher runs is stopped.
+happen. Some tests also disable the module watching if it has been enabled to ensure
+that the separate thread on which the module watcher runs is stopped.
 """
 
 import time
@@ -80,11 +80,11 @@ def _await_queue_size(manager, expected_queue_size):
     """
     This method Waits for the size of the queue to reach the given expected queue
     size number. The loop exists if the number is not reached after 15 seconds.
-    param file_watcher: file watcher object from where the queue can be acccessed
+    param manager: manager object from where the module watcher and its queue can be acccessed
     param expected_queue_size: the size that the queue needs to reach
     """
     for _ in range(30, 0, -1):
-        if manager.file_watcher.modified_files_queue.qsize() == expected_queue_size:
+        if manager.module_watcher.modified_files_queue.qsize() == expected_queue_size:
             break
         time.sleep(0.5)
 
@@ -97,7 +97,7 @@ def test_empty_manager(make_seq_manager):
     assert len(manager.provides) == 0
     assert len(manager.requires) == 0
     assert len(manager.context) == 0
-    assert len(manager.sequences) == 0
+    assert len(manager.sequence_modules) == 0
 
 
 def test_basic_manager_loaded(make_seq_manager):
@@ -106,12 +106,13 @@ def test_basic_manager_loaded(make_seq_manager):
     correct sequence functions.
     """
     manager = make_seq_manager('basic_sequences.py')
-    basic_return_value_seq_params = manager.sequences['basic_return_value']
+    basic_return_value_seq_params = manager.sequence_modules['basic_sequences'][
+        'basic_return_value']
 
     assert len(manager.modules) == 1
     assert len(manager.provides) == 1
     assert len(manager.requires) == 1
-    assert len(manager.sequences) == 3
+    assert len(manager.sequence_modules['basic_sequences']) == 3
     assert len(basic_return_value_seq_params) == 1
     assert basic_return_value_seq_params['value']['default'] == 0
     assert basic_return_value_seq_params['value']['type'] == 'int'
@@ -222,25 +223,24 @@ def test_explicit_module_load(make_seq_manager, create_paths):
     assert len(manager.modules) == 1
 
 
-def test_explicit_module_load_when_auto_reloading_enabled(make_seq_manager, create_paths):
+def test_explicit_module_load_when_module_watching_enabled(make_seq_manager, create_paths):
     """
-    Test that newly loaded modules are added to the watch list when auto reloading is
-    enabled.
+    Test that newly loaded modules are added to the watch list when module watching is enabled.
     """
     files = ['basic_sequences.py', 'with_requires.py']
     file_paths = create_paths(files)
     manager = make_seq_manager(files[0])
-    manager.enable_auto_reload()
+    manager.enable_module_watching()
 
     manager.load(str(file_paths[1]))
 
-    assert manager.file_watcher is not None
-    assert manager.auto_reload is True
-    assert len(manager.file_watcher.watched_files) == len(files)
-    assert str(file_paths[0]) in manager.file_watcher.watched_files
-    assert str(file_paths[1]) in manager.file_watcher.watched_files
+    assert manager.module_watcher is not None
+    assert manager.module_watching is True
+    assert len(manager.module_watcher.watched_files) == len(files)
+    assert str(file_paths[0]) in manager.module_watcher.watched_files
+    assert str(file_paths[1]) in manager.module_watcher.watched_files
 
-    manager.disable_auto_reload()
+    manager.disable_module_watching()
 
 
 def test_reload_with_module_name(shared_datadir, make_seq_manager, create_tmp_module_files):
@@ -373,55 +373,261 @@ def test_reload_when_byte_compiled_file_of_module_is_deleted(shared_datadir, mak
     assert message == 'Message: Hello World'
 
 
-def test_enable_auto_reload(make_seq_manager):
+def test_enable_module_watching(shared_datadir, make_seq_manager):
+    """ Test that module_watching is set to True and the loaded modules are watched."""
+    files = ['basic_sequences.py', 'with_requires.py']
+    basic_sequences_file_path = shared_datadir.joinpath(files[0])
+    with_requires_file_path = shared_datadir.joinpath(files[1])
+    manager = make_seq_manager(files)
+
+    manager.enable_module_watching()
+
+    assert manager.module_watcher is not None
+    assert manager.module_watching is True
+    assert len(manager.module_watcher.watched_files) == len(files)
+    assert str(basic_sequences_file_path) in manager.module_watcher.watched_files
+    assert str(with_requires_file_path) in manager.module_watcher.watched_files
+
+    manager.disable_module_watching()
+
+
+def test_enable_module_watching_when_no_modules_loaded(make_seq_manager):
     """
-    Test that _auto_reload is set to True and
-    a file watcher is successfully created.
+    Test that attempting to enable module watching when there are no modules
+    loaded in the manager raises an appropriate exception.
     """
     manager = make_seq_manager()
 
-    manager.enable_auto_reload()
+    with pytest.raises(
+            CommandSequenceError, match='Cannot enable module watching when no modules are loaded'
+    ):
+        manager.enable_module_watching()
 
-    assert manager.auto_reload is True
-    assert manager.file_watcher is not None
 
-
-def test_enable_auto_reload_when_auto_reloading_previously_enabled(shared_datadir,
-                                                                   make_seq_manager):
+def test_enable_module_watching_when_previously_enabled(shared_datadir, make_seq_manager):
     """
-    Test that _auto_reload is set to True and the file watcher continues
-    with watching files after being re-enabled.
+    Test that module_watching is set to True and the module watcher continues with watching
+    the loaded modules after being re-enabled.
     """
     files = ['basic_sequences.py', 'with_requires.py']
     basic_sequences_file_path = shared_datadir.joinpath(files[0])
     with_requires_file_path = shared_datadir.joinpath(files[1])
     manager = make_seq_manager(files)
-    manager.enable_auto_reload()
-    manager.disable_auto_reload()
+    manager.enable_module_watching()
+    manager.disable_module_watching()
 
-    manager.enable_auto_reload()
+    manager.enable_module_watching()
 
-    assert manager.file_watcher is not None
-    assert manager.auto_reload is True
-    assert manager.file_watcher.is_watching is True
-    assert len(manager.file_watcher.watched_files) == len(files)
-    assert str(basic_sequences_file_path) in manager.file_watcher.watched_files
-    assert str(with_requires_file_path) in manager.file_watcher.watched_files
+    assert manager.module_watcher is not None
+    assert manager.module_watching is True
+    assert len(manager.module_watcher.watched_files) == len(files)
+    assert str(basic_sequences_file_path) in manager.module_watcher.watched_files
+    assert str(with_requires_file_path) in manager.module_watcher.watched_files
 
-    manager.disable_auto_reload()
+    manager.disable_module_watching()
 
 
-def test_disable_auto_reload(make_seq_manager):
-    """
-    Test that _auto_reload is set to False.
+def test_enable_module_watching_when_already_enabled(make_seq_manager):
+    """ Test that attempting to enable module watching while already enabled raises
+    an appropriate exception.
     """
     files = ['basic_sequences.py', 'with_requires.py']
     manager = make_seq_manager(files)
-    manager.enable_auto_reload()
+    manager.enable_module_watching()
 
-    manager.disable_auto_reload()
+    with pytest.raises(
+            CommandSequenceError, match='Module watching has already been enabled'
+    ):
+        manager.enable_module_watching()
+
+    manager.disable_module_watching()
+
+
+def test_disable_module_watching(make_seq_manager):
+    """ Test that module_watching is set to False and the loaded modules are oo longer watched."""
+    files = ['basic_sequences.py', 'with_requires.py']
+    manager = make_seq_manager(files)
+    manager.enable_module_watching()
+
+    manager.disable_module_watching()
+
+    assert manager.module_watcher is not None
+    assert manager.module_watching is False
+    assert len(manager.module_watcher.watched_files) == 0
+
+
+def test_disable_module_watching_when_not_enabled(make_seq_manager):
+    """ Test that attempting to disable module watching when not enabled raises an appropriate
+    exception.
+    """
+    manager = make_seq_manager()
+
+    with pytest.raises(
+            CommandSequenceError, match='Module watching cannot be disabled as it has not ' +
+                                        'been enabled'
+    ):
+        manager.disable_module_watching()
+
+
+def test_module_modifications_detected_when_module_modified(shared_datadir, make_seq_manager,
+                                                            create_tmp_module_files):
+    """ Test that it returns True when module watching is enabled and a module is modified."""
+    tmp_files = create_tmp_module_files
+    manager = make_seq_manager(tmp_files)
+    manager.enable_module_watching()
+    modify_test_reload_module_file(shared_datadir)
+    _await_queue_size(manager, 1)
+
+    modifications_detected = manager.module_modifications_detected()
+
+    assert modifications_detected is True
+
+    manager.disable_module_watching()
+
+
+def test_module_modifications_detected_when_no_modules_modified(make_seq_manager):
+    """ Test that it returns False when module watching is enabled but no modules are modified."""
+    files = ['basic_sequences.py', 'with_requires.py']
+    manager = make_seq_manager(files)
+    manager.enable_module_watching()
+
+    modifications_detected = manager.module_modifications_detected()
+
+    assert modifications_detected is False
+
+    manager.disable_module_watching()
+
+
+def test_module_modifications_detected_when_no_module_watcher_created(make_seq_manager):
+    """ Test that attempting to check if module modifications were detected when a module
+    watcher is not created, raises an appropriate exception.
+    """
+    manager = make_seq_manager()
+
+    with pytest.raises(
+            CommandSequenceError, match='Cannot check if modifications were detected because a ' +
+                                        'module watcher has not been created'
+    ):
+        manager.module_modifications_detected()
+
+
+def test_get_modified_module_paths_when_module_modified(shared_datadir, make_seq_manager,
+                                                        create_tmp_module_files):
+    """ Test that it returns a list of paths to the modified modules when module watching
+    is enabled and a module is modified.
+    """
+    tmp_files = create_tmp_module_files
+    tmp_file_paths = [str(tmp_file) for tmp_file in tmp_files]
+    manager = make_seq_manager(tmp_files)
+    manager.enable_module_watching()
+    modify_test_reload_module_file(shared_datadir)
+    modify_with_dependency_module_file(shared_datadir)
+    _await_queue_size(manager, 2)
+
+    paths = manager.get_modified_module_paths()
+    assert paths == tmp_file_paths
+
+    manager.disable_module_watching()
+
+
+def test_get_modified_module_paths_when_no_modules_modified(make_seq_manager):
+    """ Test that it returns an empty list when module watching is enabled but no modules
+    are modified.
+    """
+    files = ['basic_sequences.py', 'with_requires.py']
+    manager = make_seq_manager(files)
+    manager.enable_module_watching()
+
+    paths = manager.get_modified_module_paths()
+    assert len(paths) == 0
+
+    manager.disable_module_watching()
+
+
+def test_get_modified_module_paths_when_no_module_watcher_created(make_seq_manager):
+    """ Test that attempting to get modified module paths when a module watcher is not
+    created, raises an appropriate exception.
+    """
+    manager = make_seq_manager()
+
+    with pytest.raises(
+            CommandSequenceError, match='Cannot get modified module paths because a module ' +
+            'watcher has not been created'
+    ):
+        manager.get_modified_module_paths()
+
+
+def test_set_auto_reload_to_true(make_seq_manager):
+    """ Test that auto_reload is set to True and module watching gets enabled."""
+    files = ['basic_sequences.py', 'with_requires.py']
+    manager = make_seq_manager(files)
+
+    manager.set_auto_reload()
+
+    assert manager.auto_reload is True
+    assert manager.module_watcher is not None
+    assert manager.module_watching is True
+
+    manager.disable_module_watching()
+
+
+def test_set_auto_reload_to_true_when_already_enabled(make_seq_manager):
+    """ Test that attempting to enable auto reload when already enabled raises an appropriate
+    exception.
+    """
+    files = ['basic_sequences.py', 'with_requires.py']
+    manager = make_seq_manager(files)
+
+    manager.set_auto_reload()
+
+    with pytest.raises(
+            CommandSequenceError, match='Auto reloading has already been enabled'
+    ):
+        manager.set_auto_reload()
+
+    manager.disable_module_watching()
+
+
+def test_set_auto_reload_to_true_when_no_modules_loaded(make_seq_manager):
+    """ Test that attempting to enable auto reload when there are no modules loaded in the
+    manager raises an appropriate exception.
+    """
+    manager = make_seq_manager()
+
+    with pytest.raises(
+            CommandSequenceError, match='Cannot enable auto reloading due to: Cannot enable ' +
+                                        'module watching when no modules are loaded'
+    ):
+        manager.set_auto_reload()
+
+
+def test_set_auto_reload_to_false(make_seq_manager):
+    """ Test that auto_reload is set to False but module watching does not get disabled."""
+    files = ['basic_sequences.py', 'with_requires.py']
+    manager = make_seq_manager(files)
+    manager.set_auto_reload()
+
+    manager.set_auto_reload(False)
 
     assert manager.auto_reload is False
+    assert manager.module_watcher is not None
+    assert manager.module_watching is True
+    assert len(manager.module_watcher.watched_files) == len(files)
+
+    manager.disable_module_watching()
+
+
+def test_set_auto_reload_to_false_when_not_enabled(make_seq_manager):
+    """ Test that attempting to disable auto reload when not enabled raises an appropriate
+    exception.
+    """
+    manager = make_seq_manager()
+
+    with pytest.raises(
+            CommandSequenceError, match='Auto reloading cannot be disabled as it has ' +
+                                        'not been enabled'
+    ):
+        manager.set_auto_reload(False)
 
 
 def test_manager_multiple_files(make_seq_manager):
@@ -525,14 +731,14 @@ def test_execute_when_module_is_modified_while_auto_reload_enabled(shared_datadi
     """
     tmp_files = create_tmp_module_files
     manager = make_seq_manager(tmp_files)
-    manager.enable_auto_reload()
+    manager.set_auto_reload()
     modify_test_reload_module_file(shared_datadir)
     _await_queue_size(manager, 1)
 
     message = manager.execute('generate_message')
     assert message == 'Message: Hello World'
 
-    manager.disable_auto_reload()
+    manager.disable_module_watching()
 
 
 def test_execute_when_modules_are_modified_while_auto_reload_enabled(shared_datadir,
@@ -544,7 +750,7 @@ def test_execute_when_modules_are_modified_while_auto_reload_enabled(shared_data
     """
     tmp_files = create_tmp_module_files
     manager = make_seq_manager(tmp_files)
-    manager.enable_auto_reload()
+    manager.set_auto_reload()
     modify_test_reload_module_file(shared_datadir)
     modify_with_dependency_module_file(shared_datadir)
     _await_queue_size(manager, 2)
@@ -552,7 +758,7 @@ def test_execute_when_modules_are_modified_while_auto_reload_enabled(shared_data
     message = manager.execute('generate_message')
     assert message == 'Message: Hello World - Hello World'
 
-    manager.disable_auto_reload()
+    manager.disable_module_watching()
 
 
 def test_execute_when_module_is_modified_while_auto_reload_disabled(shared_datadir,
@@ -566,8 +772,8 @@ def test_execute_when_module_is_modified_while_auto_reload_disabled(shared_datad
     test_reload_module = tmp_files[0]
     last_modified_time = get_last_modified_file_time(test_reload_module)
     manager = make_seq_manager(tmp_files)
-    manager.enable_auto_reload()
-    manager.disable_auto_reload()
+    manager.set_auto_reload()
+    manager.set_auto_reload(False)
     modify_test_reload_module_file(shared_datadir)
     file_modified = was_file_modified(test_reload_module, last_modified_time)
 
@@ -576,6 +782,8 @@ def test_execute_when_module_is_modified_while_auto_reload_disabled(shared_datad
         assert message == 'Message: World Hello'
     else:
         pytest.fail()
+
+    manager.disable_module_watching()
 
 
 def test_attribute_func_when_module_is_modified_while_auto_reload_enabled(shared_datadir,
@@ -587,7 +795,7 @@ def test_attribute_func_when_module_is_modified_while_auto_reload_enabled(shared
     """
     tmp_files = create_tmp_module_files
     manager = make_seq_manager(tmp_files)
-    manager.enable_auto_reload()
+    manager.set_auto_reload()
     modify_test_reload_module_file(shared_datadir)
     _await_queue_size(manager, 1)
 
@@ -595,7 +803,7 @@ def test_attribute_func_when_module_is_modified_while_auto_reload_enabled(shared
 
     assert message == 'Message: Hello World'
 
-    manager.disable_auto_reload()
+    manager.disable_module_watching()
 
 
 def test_attribute_func_when_module_sequence_is_added_auto_reload_enabled(shared_datadir,
@@ -607,14 +815,14 @@ def test_attribute_func_when_module_sequence_is_added_auto_reload_enabled(shared
     """
     tmp_files = create_tmp_module_files
     manager = make_seq_manager(tmp_files)
-    manager.enable_auto_reload()
+    manager.set_auto_reload()
     modify_test_reload_module_file(shared_datadir)
     _await_queue_size(manager, 1)
 
     basic_seq_value = manager.basic_sequence(1)
     assert basic_seq_value == 1
 
-    manager.disable_auto_reload()
+    manager.disable_module_watching()
 
 
 def test_attribute_func_when_module_is_modified_while_auto_reload_disabled(shared_datadir,
@@ -628,8 +836,8 @@ def test_attribute_func_when_module_is_modified_while_auto_reload_disabled(share
     test_reload_module = tmp_files[0]
     last_modified_time = get_last_modified_file_time(test_reload_module)
     manager = make_seq_manager(tmp_files)
-    manager.enable_auto_reload()
-    manager.disable_auto_reload()
+    manager.set_auto_reload()
+    manager.set_auto_reload(False)
     modify_test_reload_module_file(shared_datadir)
     file_modified = was_file_modified(test_reload_module, last_modified_time)
 
@@ -638,6 +846,8 @@ def test_attribute_func_when_module_is_modified_while_auto_reload_disabled(share
         assert message == 'Message: World Hello'
     else:
         pytest.fail()
+
+    manager.disable_module_watching()
 
 
 def test_execute_missing_sequence(make_seq_manager):
@@ -672,7 +882,7 @@ def test_access_context_in_sequence(make_seq_manager, context_object):
     Test that accessing a context in a sequence works as as expected.
     """
     manager = make_seq_manager('context_data/context_sequences.py')
-    context_access_seq_params = manager.sequences['context_access']
+    context_access_seq_params = manager.sequence_modules['context_sequences']['context_access']
     obj_name = 'context_object'
     manager.add_context(obj_name, context_object)
 
@@ -680,8 +890,8 @@ def test_access_context_in_sequence(make_seq_manager, context_object):
     return_val = manager.context_access(value)
 
     assert return_val == value + 1
-    assert len(manager.sequences) == 2
-    assert len(manager.sequences['missing_context_obj']) == 0
+    assert len(manager.sequence_modules['context_sequences']) == 2
+    assert len(manager.sequence_modules['context_sequences']['missing_context_obj']) == 0
     assert len(context_access_seq_params) == 1
     assert context_access_seq_params['value']['default'] == 0
     assert context_access_seq_params['value']['type'] == 'int'
