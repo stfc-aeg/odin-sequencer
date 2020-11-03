@@ -882,7 +882,7 @@ def test_attribute_func_when_module_sequence_is_added_auto_reload_enabled(shared
 
     basic_seq_value = manager.basic_sequence([0, 1])
     assert basic_seq_value == [0, 1]
-    assert manager.sequences['basic_sequence']['value']['type'] == 'list-int'
+    assert manager.sequence_modules['test_reload']['basic_sequence']['value']['type'] == 'list-int'
 
     manager.disable_module_watching()
 
