@@ -13,6 +13,10 @@ from .command_sequencer import CommandSequencer
 
 
 class CommandSequenceManagerAdapter(ApiAdapter):
+    """ ApiAdapter for the Command Sequencer.
+
+    Adapter which exposes the underlying Command Sequencer.
+    """
 
     def __init__(self, **kwargs):
         """Initialise the CommandSequenceManagerAdapter object.
@@ -22,6 +26,8 @@ class CommandSequenceManagerAdapter(ApiAdapter):
         """
         # Initialise superclass
         super(CommandSequenceManagerAdapter, self).__init__(**kwargs)
+
+        # Parse options
         sequence_location = (self.options.get('sequence_location'))
 
         self.command_sequencer = CommandSequencer(sequence_location)
@@ -41,8 +47,8 @@ class CommandSequenceManagerAdapter(ApiAdapter):
         try:
             response = self.command_sequencer.get(path)
             status_code = 200
-        except ParameterTreeError as e:
-            response = {'error': str(e)}
+        except ParameterTreeError as error:
+            response = {'error': str(error)}
             status_code = 400
 
         content_type = 'application/json'
@@ -66,32 +72,14 @@ class CommandSequenceManagerAdapter(ApiAdapter):
             self.command_sequencer.set(path, data)
             response = self.command_sequencer.get(path)
             status_code = 200
-        except CommandSequenceError as e:
-            response = {'error': str(e)}
+        except CommandSequenceError as error:
+            response = {'error': str(error)}
             status_code = 400
-        except (TypeError, ValueError) as e:
-            response = {'error': 'Failed to decode PUT request body: {}'.format(str(e))}
+        except (TypeError, ValueError) as error:
+            response = {'error': 'Failed to decode PUT request body: {}'.format(str(error))}
             status_code = 400
-
-        logging.debug(response)
 
         content_type = 'application/json'
 
         return ApiAdapterResponse(response, content_type=content_type,
                                   status_code=status_code)
-
-    def delete(self, path, request):
-        """Handle an HTTP DELETE request.
-
-        This method handles an HTTP DELETE request, returning a JSON response.
-
-        :param path: URI path of request
-        :param request: HTTP request object
-        :return: an ApiAdapterResponse object containing the appropriate response
-        """
-        response = 'CommandSequenceManagerAdapter: DELETE on path {}'.format(path)
-        status_code = 200
-
-        logging.debug(response)
-
-        return ApiAdapterResponse(response, status_code=status_code)
