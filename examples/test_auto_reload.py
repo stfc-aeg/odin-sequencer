@@ -1,6 +1,7 @@
 from odin_sequencer import CommandSequenceManager
 from pathlib import Path
-import sys
+
+
 def main():
 
     examples_dir = Path(__file__).resolve().parent
@@ -14,10 +15,10 @@ def main():
 
     csm.execute('f_one')
 
-    csm.enable_auto_reload()
+    csm.set_auto_reload()
 
     input("Modify f_one function inside f.py or any of its dependency functions and then hit return")
-    
+
     csm.f_one()
 
 if __name__ == '__main__':
