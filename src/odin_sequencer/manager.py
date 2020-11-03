@@ -117,13 +117,20 @@ class CommandSequenceManager:
             else:
                 provides = [name for name, _ in inspect.getmembers(module, inspect.isfunction)]
 
-            # Set the provided functions as attributes of this manager, so they are available
-            # to be used by calling code. A reference to a partial function is set which calls
-            # the execute function instead of the sequence function directly. This ensures
-            # that modules get reloaded when auto reloading is enabled and the functions
-            # are directly executed as callable functions from the manager itself.
             sequences = {}
             for seq_name in provides:
+                # Do not load the sequence if one with the same name has already been registered
+                if any(seq_name in val for val in self.provides.values()):
+                    raise CommandSequenceError(
+                        "Unable to load sequence '{}' from module '{}' as a sequence with the "
+                        "same name has already being registered".format(seq_name, module_name)
+                    )
+
+                # Set the provided functions as attributes of this manager, so they are available
+                # to be used by calling code. A reference to a partial function is set which calls
+                # the execute function instead of the sequence function directly. This ensures
+                # that modules get reloaded when auto reloading is enabled and the functions
+                # are directly executed as callable functions from the manager itself.
                 try:
                     seq_alias = seq_name + '_'
                     seq = getattr(module, seq_name)
@@ -135,13 +142,9 @@ class CommandSequenceManager:
                             module_name, seq_name)
                     )
 
-                seq_params = signature(seq).parameters.values()
-                for param in seq_params:
-                    if param.default is inspect.Parameter.empty or param.default is None:
-                        raise CommandSequenceError(
-                            "'{}' parameter in '{}' sequence does not have a default value".format(
-                                param.name, seq_name)
-                        )
+                # Extract information about the sequence parameters
+                seq_params = seq_params = signature(seq).parameters.values()
+                self._validate_sequence_parameters(seq_name, seq_params)
                 sequences[seq_name] = self._build_sequence_parameter_info(seq_params)
 
             # If the module declares what dependencies it requires, use that, otherwise assume there
@@ -170,22 +173,86 @@ class CommandSequenceManager:
         if resolve:
             self.resolve()
 
+    def _validate_sequence_parameters(self, seq_name, seq_params):
+        """ Validate the parameter(s) of a sequence.
+
+        This method validates the parameters of a sequence, if it has any, by checking whether
+        they have a default value. It does additional validation if the parameter is of type
+        list. It raises an exception if no default value is provided for the parameter or if
+        it is None.
+
+        :param seq_name: the name of the sequence whose parameters are validated
+        :param seq_params: list of sequence paramaters that need to be validated
+        """
+        for param in seq_params:
+            if param.default is inspect.Parameter.empty or param.default is None:
+                raise CommandSequenceError(
+                    "'{}' parameter in '{}' sequence does not have a default value".format(
+                        param.name, seq_name)
+                )
+
+            if type(param.default).__name__ == 'list':
+                self._validate_list_parameter(seq_name, param)
+
+    def _validate_list_parameter(self, seq_name, param):
+        """ Validate a list parameter of a sequence.
+
+        This method validates a list parameter of a sequence and ensures that it is not empty,
+        does not contain a list element or elements of different types. It raises exceptions if
+        any of these validations fail.
+
+        :param param: the list parameter that needs to be validated
+        :param seq_name: the name of the sequence to which the list parameter belongs to
+        """
+        if len(param.default) == 0:
+            raise CommandSequenceError(
+                "'{}' list parameter in '{}' sequence is empty".format(param.name, seq_name)
+            )
+
+        if any(isinstance(element, list) for element in param.default):
+            raise CommandSequenceError(
+                "'{}' list parameter in '{}' sequence contains a list element".format(
+                    param.name, seq_name
+                )
+            )
+
+        if not self._is_list_homogeneous(param.default):
+            raise CommandSequenceError(
+                "'{}' list parameter in '{}' sequence contains elements of different "
+                "types".format(param.name, seq_name)
+            )
+
     @staticmethod
-    def _build_sequence_parameter_info(params):
+    def _is_list_homogeneous(list_val):
+        """ This method checks whether the elements in a list are of the same type.
+
+        param list_val: the list that needs to be checked
+        :return: True if the list are of the same type, otherwise False
+        """
+        return not any(not type(element) == type(list_val[0]) for element in list_val)
+
+    def _build_sequence_parameter_info(self, params):
         """This method builds a dictionary that contains the parameter
         names that a sequence accepts, and their type and default value.
 
         :param params: the parameter(s) to extract and build information for
         :return: a dictionary with information about the parameters that the sequence accepts
         """
-
         return {
             param.name: {
                 "value": param.default,
                 "default": param.default,
-                "type": type(param.default).__name__
+                "type": self._get_parameter_type(param.default)
             } for param in params
         }
+
+    @staticmethod
+    def _get_parameter_type(param_default_val):
+        param_type = type(param_default_val).__name__
+        if param_type == 'list':
+            param_type = 'list-{}'.format(type(param_default_val[0]).__name__)
+
+        return param_type
 
     def reload(self, file_paths=None, module_names=None, resolve=True):
         """Reload currently loaded modules.
