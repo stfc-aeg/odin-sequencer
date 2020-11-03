@@ -2,7 +2,6 @@ import json
 
 from unittest.mock import Mock, MagicMock, patch
 
-from odin.adapters.parameter_tree import ParameterTreeError
 from odin_sequencer import CommandSequenceError
 from src.odin_sequencer.adapter import CommandSequenceManagerAdapter
 
@@ -30,7 +29,7 @@ class TestCommandSequenceManagerAdapter:
 
     def test_get_invalid_path(self):
         invalid_path = 'invalid_path'
-        self.command_sequencer_mock.get.side_effect = ParameterTreeError(
+        self.command_sequencer_mock.get.side_effect = CommandSequenceError(
             'Invalid path: {}'.format(invalid_path))
 
         response = self.adapter.get('invalid/path', self.request)

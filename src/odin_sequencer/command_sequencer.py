@@ -26,12 +26,16 @@ class CommandSequencer:
     def get(self, path):
         """Get parameters from the underlying parameter tree.
 
-        This method returns the parameter tree for use by clients via CommandSequenceManagerAdapter.
+        This method simply wraps underlying ParameterTree method so that an exceptions can be
+        re-raised with an appropriate CommandSequenceError.
 
         :param path: path of parameter tree to get
         :returns: parameter tree at that path as a dictionary
         """
-        return self.param_tree.get(path)
+        try:
+            return self.param_tree.get(path)
+        except ParameterTreeError as error:
+            raise CommandSequenceError(error)
 
     def set(self, path, data):
         """Set parameter in the parameter tree.

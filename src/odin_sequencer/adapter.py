@@ -6,7 +6,6 @@ import logging
 
 from tornado.escape import json_decode
 from odin.adapters.adapter import ApiAdapter, ApiAdapterResponse, request_types, response_types
-from odin.adapters.parameter_tree import ParameterTreeError
 
 from odin_sequencer import CommandSequenceError
 from .command_sequencer import CommandSequencer
@@ -47,7 +46,7 @@ class CommandSequenceManagerAdapter(ApiAdapter):
         try:
             response = self.command_sequencer.get(path)
             status_code = 200
-        except ParameterTreeError as error:
+        except CommandSequenceError as error:
             response = {'error': str(error)}
             status_code = 400
 
