@@ -14,8 +14,8 @@ requirements = [ ]
 
 setup_requirements = ['pytest-runner', 'inotify', ]
 
-with open('requirements_dev.txt') as f:
-    test_requirements = f.read().splitlines()
+with open('requirements_dev.txt') as requirements_file:
+    test_requirements = requirements_file.read().splitlines()
 
 setup(
     author="Tim Nicholls",
