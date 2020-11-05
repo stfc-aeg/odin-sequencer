@@ -28,8 +28,39 @@ class CommandSequencer:
         to communicate with the manager.
         """
         self.manager = CommandSequenceManager(path_or_paths)
+        # path_or_oaths needed for when some modules fail to reload
+        self.path_or_paths = list(self.manager.file_paths.values())
+        self.sequence_modules = self.manager.sequence_modules
+        self.detect_module_modifications = False
+        self.reload = False
+        self.module_reload_failed = False
+        self.execute_seq_name = ''
+        self.is_executing = False
+        self.log_messages = []
+        self.last_message_timestamp = ''
+        self.param_tree = self._build_param_tree()
+
         self.log_messages_deque = deque(maxlen=250)
         self.manager.register_external_logger(self.log)
+        self.thread = None
+
+    def _build_param_tree(self):
+        """Builds the parameter tree and as well as being called in the constructor, it is
+        also called in set_reload so that the the parameter tree can get updated regardless
+        of the outcome of the reloading process (i.e. adding information about any new sequences
+        that were added in the loaded module or vice versa).
+        """
+        return ParameterTree({
+            'sequence_modules': self.sequence_modules,
+            'detect_module_modifications': (
+                lambda: self.detect_module_modifications, self.set_detect_module_modifications),
+            'module_modifications_detected': (self.module_modifications_detected, None),
+            'reload': (lambda: self.reload, self.set_reload),
+            'execute': (lambda: self.execute_seq_name, self.execute_sequence),
+            'is_executing': (lambda: self.is_executing, None),
+            'log_messages': (lambda: self.log_messages, None),
+            'last_message_timestamp': (lambda: self.last_message_timestamp, self.get_log_messsages)
+        })
 
     def get(self, path):
         """Get parameters from the underlying parameter tree.
