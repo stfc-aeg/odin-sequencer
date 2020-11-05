@@ -6,10 +6,11 @@ Viktor Bozhinov, STFC.
 """
 
 
+import threading
+
 from collections import deque
 from datetime import datetime
 from odin_sequencer import CommandSequenceManager, CommandSequenceError
-
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 
 
@@ -160,6 +161,41 @@ class CommandSequencer:
         if self.module_modifications_detected():
             self._reload()
 
+    def execute_sequence(self, seq_name):
+        """Attempt to execute the passed sequence.
+
+        This method attempts to execute passed sequence name. Before doing that, it will check if
+        the sequence is loaded and will raise an exception if it is not. If it is, it will get
+        the parameter values that were set for that sequence from the parameter tree (only if the
+        sequence has parameters). The execution happens on a separate thread so that the main thread
+        does not get blocked if the sequence takes a long time to execute.Exceptions are raised if
+        the method is called while the reloading process is in progress or a sequence is being
+        executed.
+        """
+        if self.is_executing:
+            raise CommandSequenceError(
+                'Cannot execute command sequence while another one is being executed')
+
+        if self.reload:
+            raise CommandSequenceError(
+                'Cannot execute command sequence while the reloading process is in progress')
+
+        sequence_modules = self.param_tree.get('sequence_modules')['sequence_modules']
+        if not any(seq_name in seq_module for seq_module in sequence_modules.values()):
+            raise CommandSequenceError('Missing command sequence: {}'.format(seq_name))
+
+        seq = next((seq_module[seq_name] for seq_module in sequence_modules.values() if
+                    seq_name in seq_module), None)
+
+        kwargs = self._get_seq_param_values(seq)
+        self.is_executing = True
+        self.thread = threading.Thread(target=self._execute, args=(seq_name,), kwargs=kwargs)
+        self.thread.start()
+
+    def _execute(self, seq_name, **kwargs):
+        self.manager.execute(seq_name, **kwargs)
+        self.is_executing = False
+
     def log(self, *args, **kwargs):
         """This method is register as an external logger with the manager. Doing this results
         in all the print messages in the loaded sequences to be passed to this method. The method
@@ -193,3 +229,73 @@ class CommandSequencer:
             logs = list(self.log_messages_deque)
 
         self.log_messages = [(str(timestamp), log_message) for timestamp, log_message in logs]
+
+    def _get_seq_param_values(self, seq):
+        """This method gets parameter values for the provided sequence from the parameter tree.
+        The values get casted if the parameter is a list. An exception is raised if a problem
+        occurs during the casting process.
+
+        :return: dictionary containing the sequence parameters and the values that were set
+        """
+        kwargs = {}
+        for param_name in seq:
+            param_val = seq[param_name]['value']
+            param_type = seq[param_name]['type']
+
+            if param_type.startswith('list'):
+                list_type = param_type.split('-')[1]
+
+                if list_type != 'str':
+                    try:
+                        param_val = self._cast_list(list_type, param_val)
+                    except ValueError as error:
+                        raise CommandSequenceError("Invalid list: {}".format(error))
+
+            kwargs.update({
+                param_name: param_val
+            })
+
+        return kwargs
+
+    def _cast_list(self, list_type, list_val):
+        """This method decides the type of list casting that is required."""
+        if list_type == 'bool':
+            list_val = map(self._val_to_bool, list_val)
+        elif list_type == 'int':
+            list_val = map(self._val_to_int, list_val)
+        elif list_type == 'float':
+            list_val = map(self._val_to_float, list_val)
+
+        return list(list_val)
+
+    @staticmethod
+    def _val_to_bool(val):
+        if type(val != str):
+            val = str(val)
+
+        if val.lower().strip() == 'true':
+            return True
+        elif val.lower().strip() == 'false':
+            return False
+        else:
+            raise ValueError("'{}' is not a bool value".format(val))
+
+    @staticmethod
+    def _val_to_int(val):
+        if type(val != str):
+            val = str(val)
+
+        try:
+            return int(val.strip())
+        except ValueError:
+            raise ValueError("'{}' is not an int value".format(val))
+
+    @staticmethod
+    def _val_to_float(val):
+        if type(val != str):
+            val = str(val)
+
+        try:
+            return float(val.strip())
+        except ValueError:
+            raise ValueError("'{}' is not a float value".format(val))
