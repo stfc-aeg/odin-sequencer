@@ -2,7 +2,7 @@
 
 """Tests for odin_sequencer package.
 
-Some tests use the was_file_modified or _await_queue_size method to ensure that
+Some tests use the was_file_modified or await_queue_size method to ensure that
 a file was modified or that the file watcher, which runs in a separate thread,
 detects and puts details of the modified files into the queue before the assertions
 happen. Some tests also disable the module watching if it has been enabled to ensure
@@ -16,7 +16,7 @@ import pytest
 
 from odin_sequencer import CommandSequenceManager, CommandSequenceError
 from .testutils import (modify_test_reload_module_file, modify_with_dependency_module_file,
-                        get_last_modified_file_time, was_file_modified)
+                        get_last_modified_file_time, was_file_modified, await_queue_size)
 
 
 @pytest.fixture
@@ -39,24 +39,6 @@ def make_seq_manager(create_paths):
 
 
 @pytest.fixture
-def create_paths(shared_datadir):
-    """
-    Test fixture for creating file and directory paths that can be passed to
-    the manager's load function to be loaded as modules.
-    """
-
-    def _create_paths(files_or_directories):
-
-        if not isinstance(files_or_directories, list):
-            return shared_datadir.joinpath(files_or_directories)
-
-        return [shared_datadir.joinpath(
-            file_or_directory) for file_or_directory in files_or_directories]
-
-    return _create_paths
-
-
-@pytest.fixture
 def context_object():
     """
     Test fixture for creating a simple container object that can be loaded into
@@ -74,19 +56,6 @@ def context_object():
             return val + 1
 
     return ContextObject(255374)
-
-
-def _await_queue_size(manager, expected_queue_size):
-    """
-    This method Waits for the size of the queue to reach the given expected queue
-    size number. The loop exists if the number is not reached after 15 seconds.
-    param manager: manager object from where the module watcher and its queue can be acccessed
-    param expected_queue_size: the size that the queue needs to reach
-    """
-    for _ in range(30, 0, -1):
-        if manager.module_watcher.modified_files_queue.qsize() == expected_queue_size:
-            break
-        time.sleep(0.5)
 
 
 def test_empty_manager(make_seq_manager):
@@ -537,7 +506,7 @@ def test_module_modifications_detected_when_module_modified(shared_datadir, make
     manager = make_seq_manager(tmp_files)
     manager.enable_module_watching()
     modify_test_reload_module_file(shared_datadir)
-    _await_queue_size(manager, 1)
+    await_queue_size(manager.module_watcher, 1)
 
     modifications_detected = manager.module_modifications_detected()
 
@@ -583,7 +552,7 @@ def test_get_modified_module_paths_when_module_modified(shared_datadir, make_seq
     manager.enable_module_watching()
     modify_test_reload_module_file(shared_datadir)
     modify_with_dependency_module_file(shared_datadir)
-    _await_queue_size(manager, 2)
+    await_queue_size(manager.module_watcher, 2)
 
     paths = manager.get_modified_module_paths()
     assert paths == tmp_file_paths
@@ -794,7 +763,7 @@ def test_execute_when_module_is_modified_while_auto_reload_enabled(shared_datadi
     manager = make_seq_manager(tmp_files)
     manager.set_auto_reload()
     modify_test_reload_module_file(shared_datadir)
-    _await_queue_size(manager, 1)
+    await_queue_size(manager.module_watcher, 1)
 
     message = manager.execute('generate_message')
     assert message == 'Message: Hello World'
@@ -814,7 +783,7 @@ def test_execute_when_modules_are_modified_while_auto_reload_enabled(shared_data
     manager.set_auto_reload()
     modify_test_reload_module_file(shared_datadir)
     modify_with_dependency_module_file(shared_datadir)
-    _await_queue_size(manager, 2)
+    await_queue_size(manager.module_watcher, 2)
 
     message = manager.execute('generate_message')
     assert message == 'Message: Hello World - Hello World'
@@ -858,7 +827,7 @@ def test_attribute_func_when_module_is_modified_while_auto_reload_enabled(shared
     manager = make_seq_manager(tmp_files)
     manager.set_auto_reload()
     modify_test_reload_module_file(shared_datadir)
-    _await_queue_size(manager, 1)
+    await_queue_size(manager.module_watcher, 1)
 
     message = manager.generate_message()
 
@@ -878,7 +847,7 @@ def test_attribute_func_when_module_sequence_is_added_auto_reload_enabled(shared
     manager = make_seq_manager(tmp_files)
     manager.set_auto_reload()
     modify_test_reload_module_file(shared_datadir)
-    _await_queue_size(manager, 1)
+    await_queue_size(manager.module_watcher, 1)
 
     basic_seq_value = manager.basic_sequence([0, 1])
     assert basic_seq_value == [0, 1]
