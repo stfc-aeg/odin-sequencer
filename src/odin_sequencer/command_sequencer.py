@@ -70,3 +70,24 @@ class CommandSequencer:
             message += str(arg)
 
         self.log_messages_deque.append((timestamp, message))
+
+    def get_log_messsages(self, last_message_timestamp):
+        """This method gets the log messages that are appended to the log message deque by the
+        log function, and adds them to the log_messages variable. If a last message timestamp is
+        provided, it will only get the subsequent log messages if there are any, otherwise it will
+        get all of the messages from the deque.
+        """
+        logs = []
+        if last_message_timestamp:
+            last_message_timestamp = datetime.strptime(last_message_timestamp,
+                                                       "%Y-%m-%d %H:%M:%S.%f")
+
+            # Casting the deque to a list so that messages are not popped
+            for index, (timestamp, log_message) in enumerate(list(self.log_messages_deque)):
+                if timestamp > last_message_timestamp:
+                    logs = list(self.log_messages_deque)[index:]
+                    break
+        else:
+            logs = list(self.log_messages_deque)
+
+        self.log_messages = [(str(timestamp), log_message) for timestamp, log_message in logs]
