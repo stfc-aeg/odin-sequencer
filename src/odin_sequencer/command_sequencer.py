@@ -97,6 +97,69 @@ class CommandSequencer:
 
         return self.manager.module_modifications_detected()
 
+    def set_reload(self, reload):
+        """This method attempts to start the reloading process if True is passed to it. It takes
+        different routes depending on different states. If module modifications process is enabled,
+        it reloads the loaded modules that get modified during the process, otherwise it reloads
+        all the loaded modules. An exception is raised if a problem occurs during the reloading
+        process and sets module_reload_failed to True. The _build_param_tree is called regardless
+        of the outcome of the reloading process. Exceptions are also raised if there are no
+        modules loaded in the manager or a sequence is being executed.
+        """
+        sequence_modules = self.param_tree.get('sequence_modules')['sequence_modules']
+        if not sequence_modules:
+            raise CommandSequenceError(
+                'Cannot start the reloading process as there are no sequence modules loaded')
+
+        if self.is_executing:
+            raise CommandSequenceError(
+                'Cannot start the reloading process while a sequence is being executed')
+
+        if reload:
+            try:
+                if self.module_reload_failed:
+                    self._load_failed_modules()
+                else:
+                    self._reload()
+                # Resolving at the end to avoid dependency issues
+                self.manager.resolve()
+                self.module_reload_failed = False
+            except CommandSequenceError as error:
+                self.module_reload_failed = True
+                raise CommandSequenceError(
+                    'A problem occurred during the reloading process: {}'.format(error))
+            finally:
+                self.param_tree = self._build_param_tree()
+
+    def _reload(self):
+        """This method reloads the loaded modules that get modified during the detect module
+        modifications process (if enabled), otherwise it reloads all the loaded modules.
+        """
+        modified_module_paths = None
+
+        if self.detect_module_modifications and self.module_modifications_detected():
+            modified_module_paths = self.manager.get_modified_module_paths()
+
+        # All modules are reloaded when manager's reload receives None for the file_paths arg
+        self.manager.reload(file_paths=modified_module_paths, resolve=False)
+
+    def _load_failed_modules(self):
+        """This method attempts to load the modules that failed to previously reload
+
+        If module_reload_failed is True, next time the set_reload method is called, this method
+        will take all the module paths from path_or_paths (contains all module paths that were
+        initially loaded into the manager), compares them against the manager's path_or_paths
+        (contains all module paths that are currently loaded) and attempt to load the ones that
+        are missing. It also attempts to reload any loaded modules that were modified.
+        """
+        for path in self.path_or_paths:
+            if path not in self.manager.file_paths.values():
+                self.manager.load(path_or_paths=path, resolve=False)
+
+        # Reload any modules that were modified during the above load process
+        if self.module_modifications_detected():
+            self._reload()
+
     def log(self, *args, **kwargs):
         """This method is register as an external logger with the manager. Doing this results
         in all the print messages in the loaded sequences to be passed to this method. The method
