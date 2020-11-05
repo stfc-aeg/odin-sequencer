@@ -1,6 +1,8 @@
 """CommandSequencer module
 
 Module which facilities communication to the command sequencer manager.
+
+Viktor Bozhinov, STFC.
 """
 
 from odin_sequencer import CommandSequenceManager, CommandSequenceError

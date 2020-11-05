@@ -1,6 +1,8 @@
 """Command sequence manager adapter
 
 Adapter which exposes the underlying Command sequence manager module
+
+Viktor Bozhinov, STFC.
 """
 import logging
 
