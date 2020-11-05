@@ -83,6 +83,20 @@ class CommandSequencer:
 
         self.detect_module_modifications = detect_module_modifications
 
+    def module_modifications_detected(self):
+        """Check whether module modifications were detected.
+
+        This method checks if module modifications were detected only if the the detect module
+        modifications process is enabled.
+
+        :return: False if the detect module modifications process is not enabled or not module
+                modifications were detected, otherwise True
+        """
+        if self.detect_module_modifications is False:
+            return False
+
+        return self.manager.module_modifications_detected()
+
     def log(self, *args, **kwargs):
         """This method is register as an external logger with the manager. Doing this results
         in all the print messages in the loaded sequences to be passed to this method. The method
