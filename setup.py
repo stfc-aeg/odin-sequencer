@@ -14,7 +14,8 @@ requirements = [ ]
 
 setup_requirements = ['pytest-runner', 'inotify', ]
 
-test_requirements = ['pytest>=3', 'inotify', ]
+with open('requirements_dev.txt') as requirements_file:
+    test_requirements = requirements_file.read().splitlines()
 
 setup(
     author="Tim Nicholls",
@@ -30,6 +31,7 @@ setup(
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
     ],
+    extras_require={'test': test_requirements},
     description="A python command sequencer to allow easy scripting in ODIN control systems",
     install_requires=requirements,
     license="Apache Software License 2.0",
@@ -41,7 +43,6 @@ setup(
     package_dir={'':'src'},
     setup_requires=setup_requirements,
     test_suite='tests',
-    tests_require=test_requirements,
     url='https://github.com/stfc-aeg/odin-sequencer',
     version='0.1.0',
     zip_safe=False,
