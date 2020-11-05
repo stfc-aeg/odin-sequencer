@@ -5,6 +5,9 @@ Module which facilities communication to the command sequencer manager.
 Viktor Bozhinov, STFC.
 """
 
+
+from collections import deque
+from datetime import datetime
 from odin_sequencer import CommandSequenceManager, CommandSequenceError
 
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
@@ -13,7 +16,8 @@ from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 class CommandSequencer:
     """CommandSequencer object representing the command sequencer manager.
 
-    Facilities communcation to the command sequence manager."""
+    Facilities communcation to the command sequence manager.
+    """
 
     def __init__(self, path_or_paths=None):
         """Initialise the CommandSequencer object.
@@ -23,7 +27,8 @@ class CommandSequencer:
         to communicate with the manager.
         """
         self.manager = CommandSequenceManager(path_or_paths)
-        self.param_tree = ParameterTree({})
+        self.log_messages_deque = deque(maxlen=250)
+        self.manager.register_external_logger(self.log)
 
     def get(self, path):
         """Get parameters from the underlying parameter tree.
@@ -52,3 +57,16 @@ class CommandSequencer:
             self.param_tree.set(path, data)
         except ParameterTreeError as error:
             raise CommandSequenceError(error)
+
+    def log(self, *args, **kwargs):
+        """This method is register as an external logger with the manager. Doing this results
+        in all the print messages in the loaded sequences to be passed to this method. The method
+        intercepts each print message, adds a timestamp to it and puts it onto the deque.
+        """
+        timestamp = datetime.now()
+        message = ''
+
+        for arg in args:
+            message += str(arg)
+
+        self.log_messages_deque.append((timestamp, message))
