@@ -50,6 +50,7 @@ class CommandSequenceManager:
         self.module_watcher = None
         self.module_watching = False
         self.auto_reload = False
+        self.external_logger = None
 
         # If one or more files have been specified, attempt to load and resolve them
         if path_or_paths:
@@ -472,6 +473,37 @@ class CommandSequenceManager:
             for required in self.requires[name]:
                 for provided in self.provides[required]:
                     setattr(module, provided, getattr(self.modules[required], provided))
+
+            # Add a print attribute to each module, linking the log_message function to get
+            # called when the print statement is called in any of the loaded module sequences.
+            # Doing this allows the log_message function to intercept and pass the print messages
+            # to an external logging function.
+            setattr(module, 'print', self.log_message)
+
+    def log_message(self, *args, **kwargs):
+        """ Determine what to do with the messages that are passed to the print statement in the
+        loaded module sequences.
+
+        This method passes the print messages to an external logger if registered, or to the
+        built-in print function.
+
+        :param *args: variable list of positional arguments to pass to function
+        :param *kwargs: variable list of keyword arguments to pass to function
+        """
+        if self.external_logger:
+            self.external_logger(*args, **kwargs)
+        else:
+            print(*args, **kwargs)
+
+    def register_external_logger(self, logging_func):
+        """ Register an external logging function.
+
+        This method allows an external logging function to be registered so that the log_message
+        function can pass the print messages to it.
+
+        :param logging_func: the logging function to register
+        """
+        self.external_logger = logging_func
 
     def execute(self, sequence_name, *args, **kwargs):
         """Execute a command sequence.
