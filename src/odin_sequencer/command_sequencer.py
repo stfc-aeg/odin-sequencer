@@ -58,6 +58,31 @@ class CommandSequencer:
         except ParameterTreeError as error:
             raise CommandSequenceError(error)
 
+    def set_detect_module_modifications(self, detect_module_modifications):
+        """Enable/ disable detect module modifications.
+
+        This method enables or disables the detect module modifications process based on the bool
+        value that is passed to it. Exceptions are raised if True is passed while the detect module
+        modifications process is enabled, or False is passed while the detect module modifications
+        process is disabled.
+
+        :param detect_module_modifications
+        """
+        if detect_module_modifications:
+            try:
+                self.manager.enable_module_watching()
+            except CommandSequenceError as error:
+                raise CommandSequenceError('A problem occurred while trying to start the ' +
+                                           'Detect Modifications process: {}'.format(error))
+        else:
+            try:
+                self.manager.disable_module_watching()
+            except CommandSequenceError as error:
+                raise CommandSequenceError('A problem occurred while trying to stop the ' +
+                                           'Detect Modifications process: {}'.format(error))
+
+        self.detect_module_modifications = detect_module_modifications
+
     def log(self, *args, **kwargs):
         """This method is register as an external logger with the manager. Doing this results
         in all the print messages in the loaded sequences to be passed to this method. The method
