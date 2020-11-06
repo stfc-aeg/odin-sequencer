@@ -108,7 +108,9 @@ function reload_modules() {
     }).fail(function (jqXHR) {
         alert_id = ALERT_ID['sequencer_error'];
         alert_message = extract_error_message(jqXHR);
-        alert_message += '.<br><br>To load the missing sequences, first resolve the errors and then click the Reload button.';
+        if (!alert_message.startsWith('Cannot start the reloading')) {
+            alert_message += '.<br><br>To load the missing sequences, first resolve the errors and then click the Reload button.';
+        }
     }).always(function () {
         display_alert(alert_id, alert_message);
         build_sequence_modules_layout();
