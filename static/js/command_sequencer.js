@@ -1,13 +1,30 @@
 var detect_module_modifications;
 var last_message_timestamp = '';
 var sequence_modules = {};
+var is_executing;
+
+const ALERT_ID = {
+    'sequencer_error': '#command-sequencer-error-alert',
+    'sequencer_info': '#command-sequencer-info-alert',
+};
+
+const BUTTON_ID = {
+    'all_execute': '.execute-btn',
+    'reload': '#reload-btn'
+};
 
 $(document).ready(function () {
     build_sequence_modules_layout();
     display_log_messages();
 
     apiGET('').then(function (response) {
+        is_executing = response.is_executing;
         detect_module_modifications = response.detect_module_modifications;
+
+        if (is_executing) {
+            disable_buttons(`${BUTTON_ID['all_execute']},${BUTTON_ID['reload']}`, true);
+            await_execution_complete();
+        }
 
         set_detect_module_changes_toggle(detect_module_modifications);
         if (detect_module_modifications) {
@@ -100,6 +117,129 @@ function reload_modules() {
 }
 
 /**
+ * This function executes a sequence. Each sequence in the UI has an Execute button
+ * whose id contains the name of the sequence, and it decides which sequence to execute
+ * based on the id. If the sequence has parameter(s) then it will get input values and
+ * send them to the back end before executing it. Because the execute call to the
+ * backend is asynchronous, it calls the await_execution_complete function with a
+ * slight delay. It also disables the execute and reload buttons, and displays
+ * messages in the alerts about any errors that may occur during the processes.
+ */
+function execute_sequence(button) {
+    clicked_button_id = button.id;
+    arr = clicked_button_id.split('-');
+    seq_module_name = arr[0];
+    seq_name = arr[1];
+    params = sequence_modules[seq_module_name][seq_name];
+
+    if (!jQuery.isEmptyObject(params)) {
+        data = get_input_parameter_values(params);
+        apiPUT(data, `sequence_modules/${seq_module_name}/${seq_name}`).done(function () {
+            hide_alerts(`${ALERT_ID['sequencer_info']},${ALERT_ID['sequencer_error']},.sequence-alert`);
+            disable_buttons(`${BUTTON_ID['all_execute']},${BUTTON_ID['reload']}`, true);
+
+            apiPUT({ 'execute': seq_name }).fail(function (jqXHR) {
+                error_message = extract_error_message(jqXHR);
+                if (error_message.startsWith('Invalid list')) {
+                    error_message = error_message.substring(error_message.lastIndexOf(':') + 2);
+                }
+
+                display_alert(`#${seq_name}-alert`, error_message);
+            });
+
+            setTimeout(await_execution_complete, 250);
+        }).fail(function (jqXHR) {
+            error_message = extract_error_message(jqXHR);
+            if (error_message.startsWith('Type mismatch updating')) {
+                last_slash = error_message.lastIndexOf('/');
+                second_to_last_slash = error_message.lastIndexOf('/', last_slash - 1);
+                param_name = error_message.substring(second_to_last_slash + 1, last_slash);
+                error_message = `${param_name} - ${error_message.substring(error_message.lastIndexOf(':') + 2)}`;
+            }
+
+            display_alert(`#${seq_name}-alert`, error_message);
+        });
+
+    } else {
+        disable_buttons(`${BUTTON_ID['all_execute']},${BUTTON_ID['reload']}`, true)
+        apiPUT({ 'execute': seq_name }).fail(function (jqXHR) {
+            error_message = extract_error_message(jqXHR);
+            display_alert(`#${seq_name}-alert`, error_message);
+        });
+
+        setTimeout(await_execution_complete, 250);
+    }
+}
+
+/**
+ * This function gets the input parameter values. The id of each parameter
+ * input box contains the name of the parameter. It calls the parse_parameter_value
+ * function if the parameter type is not of type string.
+ */
+function get_input_parameter_values(params) {
+    data = {};
+    for (param in params) {
+        param_val = $(`#${seq_name}-${param}-input`).val();
+        param_type = params[param]['type'];
+
+        if (param_type != 'str') {
+            param_val = parse_parameter_value(param_val, param_type);
+        }
+
+        data[param] = { 'value': param_val };
+    }
+
+    return data;
+}
+
+/**
+ * This function parses the parameter value from string to the correct type.
+ * Parsing is required because input boxes hold values in form of strings.
+ * If the parameter is of type list, then the string is split by comma to
+ * form an array of strings.
+ */
+function parse_parameter_value(param_val, param_type) {
+    if (param_type.startsWith('list')) {
+        param_type = 'list';
+    }
+
+    switch (param_type) {
+        case 'int':
+            param_val = parseInt(param_val);
+            break;
+        case 'float':
+            param_val = parseFloat(param_val);
+            break;
+        case 'bool':
+            param_val = param_val == 'True';
+            break;
+        case 'list':
+            param_val = param_val.split(',');
+            break;
+    }
+
+    return param_val;
+}
+
+/**
+ * This function waits for the execution to complete by calling itself if the process
+ * is not finished. It calls the display_log_messages to display any log messages.
+ * It enables the execute and reload buttons when it detects that the execution
+ * process has completed.
+ */
+function await_execution_complete() {
+    apiGET('is_executing').then(function (response) {
+        display_log_messages();
+        is_executing = response.is_executing
+        if (is_executing) {
+            setTimeout(await_execution_complete, 1000);
+        } else {
+            disable_buttons(`${BUTTON_ID['all_execute']},${BUTTON_ID['reload']}`, false);
+        }
+    });
+}
+
+/**
  * This function displays the alert and the given alert message by removing
  * the d-none class from the div(s).
  */
@@ -120,6 +260,14 @@ function hide_alerts(alert_id_or_ids) {
  */
 function disable_buttons(button_id_or_ids, disabled) {
     $(button_id_or_ids).prop('disabled', disabled);
+}
+
+/**
+ * This function extracts the message from the error response. 
+ */
+function extract_error_message(jqXHR) {
+    response_text = JSON.parse(jqXHR["responseText"]);
+    return response_text['error'];
 }
 
 /**
