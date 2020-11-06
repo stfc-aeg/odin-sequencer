@@ -1,7 +1,9 @@
+var last_message_timestamp = '';
 var sequence_modules = {};
 
 $(document).ready(function () {
     build_sequence_modules_layout();
+    display_log_messages();
 });
 
 /**
@@ -25,6 +27,39 @@ function hide_alerts(alert_id_or_ids) {
  */
 function disable_buttons(button_id_or_ids, disabled) {
     $(button_id_or_ids).prop('disabled', disabled);
+}
+
+/**
+ * This function displays the log messages that are returned by the backend in the
+ * pre-scrollable element and scrolls down to the bottom of it. It stores the
+ * timestamp of the last message so that it can tell the backend which messages it
+ * needs to get next. All log messages are returned if the last_message_timestamp is
+ * empty and this normally happens when the page is reloaded.
+ */
+function display_log_messages() {
+    get_log_messages().done(function (response) {
+        log_messages = response.log_messages;
+        if (!jQuery.isEmptyObject(log_messages)) {
+            last_message_timestamp = log_messages[log_messages.length - 1][0];
+
+            for (log_message in log_messages) {
+                pre_scrollable_id = '#log-messages';
+                $(pre_scrollable_id).append(`<span style="color:#007bff">${log_messages[log_message][0]}</span> ${log_messages[log_message][1]}<br>`);
+                // Scrolls down
+                $(pre_scrollable_id).animate({ scrollTop: $(pre_scrollable_id).prop('scrollHeight') }, 1000);
+            }
+        }
+    }).fail(function () {
+        error_message = 'A problem occurred while trying to get log messages';
+        display_alert(ALERT_ID['sequencer_info'], error_message);
+    });
+}
+
+/**
+ * This function gets the log messages from the backend.
+ */
+function get_log_messages() {
+    return apiPUT({ 'last_message_timestamp': last_message_timestamp }).then(apiGET('log_messages'));
 }
 
 /**
