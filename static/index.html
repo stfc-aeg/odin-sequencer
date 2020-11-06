@@ -19,6 +19,23 @@
   <nav class="navbar navbar-inverse navbar-fixed-top"></nav>
 
   <div class="container">
+    <div class="row">
+      <div class="col-md-1"></div>
+      <div class="col-md-10">
+        <div class="row mb-3">
+          <div class="col-md-8"></div>
+          <div class="col-md-2">
+            <label>&nbsp;</label><br>
+            <button type="submit" class="btn btn-primary" onclick="reload_modules()" id="reload-btn">Reload</button>
+          </div>
+          <div class="col-md-2" align="center">
+            <label><b>Detect Changes</b></label><br>
+            <input type="checkbox" data-toggle="toggle" data-on="Enabled" data-off="Disabled" id="detect-module-changes-toggle">
+          </div>
+        </div>
+      </div>
+      <div class="col-md-1"></div>
+    </div>
     <div class="row mb-5">
       <div class="col-md-1"></div>
       <div class="col-md-10" id="sequence-modules-layout"></div>
