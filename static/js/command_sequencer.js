@@ -5,6 +5,22 @@ $(document).ready(function () {
 });
 
 /**
+ * This function displays the alert and the given alert message by removing
+ * the d-none class from the div(s).
+ */
+function display_alert(alert_id, alert_message) {
+    $(alert_id).removeClass('d-none').html(alert_message);
+}
+
+/**
+ * This function hides the alert(s) and the alert message(s) by adding the d-none
+ * class to the div(s).
+ */
+function hide_alerts(alert_id_or_ids) {
+    $(alert_id_or_ids).addClass('d-none').html('');
+}
+
+/**
  * This function gets information about the loaded sequence modules from the backend and based
  * on that, it dynamically builds and injects the HTML code for the sequence modules layout.
  */
