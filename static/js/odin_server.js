@@ -1,3 +1,6 @@
+var api_version = '0.1';
+var adapter = 'odin_sequencer';
+
 /**
  * This function handles the GET requests to the backend's API. 
  */
