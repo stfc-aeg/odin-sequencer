@@ -1,6 +1,6 @@
 """CommandSequencer module
 
-Module which facilities communication to the command sequencer manager.
+Module which facilitates communication to the command sequencer manager.
 
 Viktor Bozhinov, STFC.
 """
@@ -17,7 +17,7 @@ from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 class CommandSequencer:
     """CommandSequencer object representing the command sequencer manager.
 
-    Facilities communcation to the command sequence manager.
+    Facilitates communcation to the command sequence manager.
     """
 
     def __init__(self, path_or_paths=None):
@@ -280,7 +280,8 @@ class CommandSequencer:
                     try:
                         param_val = self._cast_list(list_type, param_val)
                     except ValueError as error:
-                        raise CommandSequenceError("Invalid list: {}".format(error))
+                        raise CommandSequenceError("Invalid list: {} - {}".format(
+                            param_name, error))
 
             kwargs.update({
                 param_name: param_val
