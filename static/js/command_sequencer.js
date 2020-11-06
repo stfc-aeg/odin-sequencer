@@ -21,6 +21,13 @@ function hide_alerts(alert_id_or_ids) {
 }
 
 /**
+ * This function disables the button(s) if disabled is True, otherwise it enables them.
+ */
+function disable_buttons(button_id_or_ids, disabled) {
+    $(button_id_or_ids).prop('disabled', disabled);
+}
+
+/**
  * This function gets information about the loaded sequence modules from the backend and based
  * on that, it dynamically builds and injects the HTML code for the sequence modules layout.
  */
