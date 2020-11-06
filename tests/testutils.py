@@ -20,6 +20,18 @@ def modify_test_reload_module_file(shared_datadir):
     module.write_text("""provides = ['get_message', 'basic_sequence']
 def get_message():
     return 'Hello World'
+
+def basic_sequence(value=[1]):
+    return value""")
+
+
+def modify_test_reload_module_file_syntax_error(shared_datadir):
+    time.sleep(0.1)
+    module = shared_datadir.joinpath('test_reload.py')
+
+    module.write_text("""provides = ['get_message', 'basic_sequence']
+dof get_message():
+    return 'Hello World'
  
 def basic_sequence(value=[1]):
     return value""")
@@ -41,17 +53,16 @@ def generate_message():
     return 'Message: ' + get_message() + ' - ' + get_message()""")
 
 
-def await_queue_size(file_watcher, expected_queue_size):
+def await_queue_size(module_watcher, expected_queue_size):
     """
     This method Waits for the size of the queue to reach the given expected queue
-    size number. The loop exists if the number is not reached after 10 seconds.
+    size number. The loop exists if the number is not reached after 15 seconds.
+    param manager: manager object from where the module watcher and its queue can be acccessed
+    param expected_queue_size: the size that the queue needs to reach.
     """
-
     for _ in range(30, 0, -1):
-        actual_queue_size = file_watcher.modified_files_queue.qsize()
-        if actual_queue_size == expected_queue_size:
+        if module_watcher.modified_files_queue.qsize() == expected_queue_size:
             break
-
         time.sleep(0.5)
 
 
