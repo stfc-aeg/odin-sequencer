@@ -1,10 +1,76 @@
+var detect_module_modifications;
 var last_message_timestamp = '';
 var sequence_modules = {};
 
 $(document).ready(function () {
     build_sequence_modules_layout();
     display_log_messages();
+
+    apiGET('').then(function (response) {
+        detect_module_modifications = response.detect_module_modifications;
+
+        set_detect_module_changes_toggle(detect_module_modifications);
+        if (detect_module_modifications) {
+            await_module_changes();
+        }
+    });
 });
+
+$(".my-tooltip").tooltip();
+
+/**
+ * This is called when a change in the Detect Changes toggle is detected. Depending on
+ * whether the toggle was enabled or disabled, it calls the mechanism on the backend to
+ * either enable or disable the detect module changes process. If the toggle is enabled,
+ * it calls the await_module_changes function to listen for module changes. It also
+ * displays an alert message if an error occurs.
+ */
+$('#detect-module-changes-toggle').change(function () {
+    enabled = $(this).prop('checked');
+    apiPUT({ 'detect_module_modifications': enabled }).done(function () {
+        detect_module_modifications = enabled;
+        if (enabled) {
+            await_module_changes();
+        }
+    }).fail(function (jqXHR) {
+        error_message = extract_error_message(jqXHR);
+        if (enabled) {
+            set_detect_module_changes_toggle(false);
+        }
+
+        display_alert(ALERT_ID['sequencer_error'], error_message);
+    });
+});
+
+/**
+ * This function listens for module changes by calling itself every second. It displays
+ * an alert message when it detects that the backend has reported of module changes. 
+ */
+function await_module_changes() {
+    apiGET('module_modifications_detected').then(function (response) {
+        if (response.module_modifications_detected) {
+            info_message = 'Code changes were detected, click the Reload button to load them';
+            display_alert(ALERT_ID['sequencer_info'], info_message);
+        }
+
+        if (detect_module_modifications) {
+            setTimeout(await_module_changes, 1000);
+        }
+    });
+}
+
+/**
+ * This function enables or disables the Detect Changes toggle.
+ */
+function set_detect_module_changes_toggle(detect_module_modifications) {
+    var toggle = $('#detect-module-changes-toggle').data('bs.toggle');
+    // Calling on/ off with silent as true to prevent firing of change events
+    if (detect_module_modifications) {
+        toggle.on(true);
+    } else {
+        toggle.off(true);
+    }
+}
 
 /**
  * This function calls the reloading mechanism implemented on the backend which decides
