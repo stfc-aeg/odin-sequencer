@@ -364,8 +364,8 @@ def test_execute_sequence_int_list_param_non_int_values_passed_as_strings(create
     command_sequencer.set(path_to_seq, data)
 
     with pytest.raises(
-            CommandSequenceError, match="Invalid list: '{}' is not an int value".format(
-                new_list_val[0])
+            CommandSequenceError, match="Invalid list: {} - '{}' is not an int value".format(
+                param_name, new_list_val[0])
     ):
         command_sequencer.execute_sequence(seq_name)
 
@@ -405,8 +405,8 @@ def test_execute_sequence_float_list_param_non_float_values_passed_as_strings(
     command_sequencer.set(path_to_seq, data)
 
     with pytest.raises(
-            CommandSequenceError, match="Invalid list: '{}' is not a float value".format(
-                new_list_val[0])
+            CommandSequenceError, match="Invalid list: {} - '{}' is not a float value".format(
+                param_name, new_list_val[0])
     ):
         command_sequencer.execute_sequence(seq_name)
 
@@ -447,8 +447,8 @@ def test_execute_sequence_float_list_param_non_bool_values_passed_as_strings(
     command_sequencer.set(path_to_seq, data)
 
     with pytest.raises(
-            CommandSequenceError, match="Invalid list: '{}' is not a bool value".format(
-                new_list_val[0])
+            CommandSequenceError, match="Invalid list: {} - '{}' is not a bool value".format(
+                param_name, new_list_val[0])
     ):
         command_sequencer.execute_sequence(seq_name)
 
