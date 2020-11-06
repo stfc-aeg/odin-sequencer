@@ -7,6 +7,33 @@ $(document).ready(function () {
 });
 
 /**
+ * This function calls the reloading mechanism implemented on the backend which decides
+ * which modules need to be reloaded. It disables the execute and reload buttons before
+ * making a call to the backend and enables them when the process completes or fails.
+ * It also calls the build_sequence_modules_layout to rebuild the layout and displays
+ * the relevant messages in the alerts depending on the process outcome.
+ */
+function reload_modules() {
+    hide_alerts(`${ALERT_ID['sequencer_info']},${ALERT_ID['sequencer_error']}`);
+    disable_buttons(`${BUTTON_ID['all_execute']},${BUTTON_ID['reload']}`, true);
+
+    alert_id = '';
+    alert_message = '';
+    apiPUT({ 'reload': true }).done(function () {
+        alert_id = ALERT_ID['sequencer_info'];
+        alert_message = 'The sequence modules were successfully reloaded';
+    }).fail(function (jqXHR) {
+        alert_id = ALERT_ID['sequencer_error'];
+        alert_message = extract_error_message(jqXHR);
+        alert_message += '.<br><br>To load the missing sequences, first resolve the errors and then click the Reload button.';
+    }).always(function () {
+        display_alert(alert_id, alert_message);
+        build_sequence_modules_layout();
+        disable_buttons(`${BUTTON_ID['all_execute']},${BUTTON_ID['reload']}`, false);
+    });
+}
+
+/**
  * This function displays the alert and the given alert message by removing
  * the d-none class from the div(s).
  */
