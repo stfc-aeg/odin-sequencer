@@ -224,8 +224,12 @@ class CommandSequencer:
         self.thread.start()
 
     def _execute(self, seq_name, **kwargs):
-        self.manager.execute(seq_name, **kwargs)
-        self.is_executing = False
+        try:
+            self.manager.execute(seq_name, **kwargs)
+        except CommandSequenceError as error:
+            raise CommandSequenceError('A problem occurred during the execution of {}: {}'.format(seq_name, error))
+        finally:
+            self.is_executing = False
 
     def log(self, *args, **kwargs):
         """This method is register as an external logger with the manager. Doing this results
