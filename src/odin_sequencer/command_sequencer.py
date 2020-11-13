@@ -303,6 +303,10 @@ class CommandSequencer:
             list_val = map(self._val_to_float, list_val)
 
         return list(list_val)
+    
+    def _add_context(self, name, obj):
+        """This method adds an object to the manager context."""
+        self.manager.add_context(name, obj)
 
     @staticmethod
     def _val_to_bool(val):

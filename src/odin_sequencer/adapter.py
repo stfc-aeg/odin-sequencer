@@ -84,3 +84,10 @@ class CommandSequenceManagerAdapter(ApiAdapter):
 
         return ApiAdapterResponse(response, content_type=content_type,
                                   status_code=status_code)
+
+    def add_context(self, name, obj):
+        """This method adds an object to the manager context.
+        :param name: Name of context
+        :param obj: Context object
+        """
+        self.command_sequencer._add_context(name, obj)
