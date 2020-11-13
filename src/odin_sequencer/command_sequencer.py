@@ -227,6 +227,7 @@ class CommandSequencer:
         try:
             self.manager.execute(seq_name, **kwargs)
         except CommandSequenceError as error:
+            self.manager.log_message('<b style="color:red">Execution error</b>: {}: {}'.format(seq_name, error))
             raise CommandSequenceError('A problem occurred during the execution of {}: {}'.format(seq_name, error))
         finally:
             self.is_executing = False

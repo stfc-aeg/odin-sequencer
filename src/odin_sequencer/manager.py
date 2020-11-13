@@ -532,7 +532,7 @@ class CommandSequenceManager:
                 'Missing command sequence: {}'.format(sequence_name)
             )
         except CommandSequenceError as error:
-            self.log_message('<b style="color:red">Execution error</b>: {}: {}'.format(sequence_name, error))
+            raise error
 
     def add_context(self, name, obj):
         """Add an object to the manager context.
