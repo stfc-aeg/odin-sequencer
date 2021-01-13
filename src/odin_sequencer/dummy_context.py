@@ -6,14 +6,6 @@ added to the odin sequencer.
 Rhys Evans, STFC
 """
 import logging
-import tornado
-import time
-import sys
-from concurrent import futures
-
-from tornado.ioloop import IOLoop, PeriodicCallback
-from tornado.concurrent import run_on_executor
-from tornado.escape import json_decode
 
 from odin.adapters.adapter import ApiAdapter, ApiAdapterResponse, request_types, response_types
 
@@ -123,4 +115,3 @@ class TestDevice():
 
     def write_reg(self, reg, vals):
         print("In write reg with reg {} vals {}".format(reg, vals))
-

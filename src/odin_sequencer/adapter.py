@@ -91,3 +91,9 @@ class CommandSequenceManagerAdapter(ApiAdapter):
         :param obj: Context object
         """
         self.command_sequencer._add_context(name, obj)
+
+    def start_process_monitor(self, process_monitor):
+        """This method starts the process monitor thread.
+        :param obj: process monitor object
+        """
+        self.command_sequencer._start_process_monitor(process_monitor)

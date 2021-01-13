@@ -514,6 +514,37 @@ def test_execute_sequence_with_missing_sequence(create_command_sequencer):
     assert command_sequencer.is_executing is False
 
 
+def test_start_process_task(create_command_sequencer):
+    uuid = 'uuid'
+    command_sequencer = create_command_sequencer()
+    
+    command_sequencer.start_process_task(uuid)
+    process_tasks = command_sequencer.process_tasks
+
+    assert process_tasks == [uuid]
+
+
+def test_finish_process_task(create_command_sequencer):
+    uuid = 'uuid'
+    command_sequencer = create_command_sequencer()
+    command_sequencer.process_tasks = [uuid]
+    
+    command_sequencer.finish_process_task(uuid)
+    process_tasks = command_sequencer.process_tasks
+
+    assert process_tasks == []
+
+
+def test_finish_process_task_with_empty_process_tasks_list(create_command_sequencer):
+    uuid = 'uuid'
+    command_sequencer = create_command_sequencer()
+
+    with pytest.raises(
+            CommandSequenceError, match='Empty process task list while trying to remove {}'.format(uuid)
+    ):
+        command_sequencer.finish_process_task(uuid)
+
+
 def test_get_log_messages_with_no_last_message_timestamp(shared_datadir, create_command_sequencer,
                                                          create_tmp_module_files):
 
