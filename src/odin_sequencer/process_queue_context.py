@@ -64,14 +64,15 @@ class ProcessWriter():
     def run(self, function, ignore_result, *args):
         """This method calls the celery task _run with the given function name and arguments.
         :param function: Name of function from 'tasks.py'
+        :param ignore_result: if true no result is returned
         :param *args: Arguments for the given function
         """
-        logging.debug(args)
         return self._run.apply_async(args=(function, args), ignore_results=ignore_result)
 
     def group(self, function, ignore_result, iterator, *args):
         """This method calls a group of celery task _run with the given function name and arguments.
         :param function: Name of function from 'tasks.py'
+        :param ignore_result: if true no results are returned
         :param iterator: Iterator for the group function
         """
         signatures = []

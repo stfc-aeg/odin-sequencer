@@ -15,6 +15,12 @@ def test_sequence(a_val=123, b='hello'):
     reg_val = dev.read_reg()
     print("Read register value", reg_val)
 
+    queue = get_context('process_writer')
+    queue.run('add', True, 4, 3)
+    queue.group('add', True, range(10), 3)
+    queue.group('dub', True, range(10))
+    queue.run('dub', True, 5)
+
     for i in range(10):
         spi_write([i])
     

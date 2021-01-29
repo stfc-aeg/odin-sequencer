@@ -257,7 +257,6 @@ class CommandSequencer:
             return False
         else:
             self.process_group_tasks[group_uuid] = [task_uuid]
-            self.process_tasks.append(group_uuid)
             return True
 
     def finish_process_group_task(self, task_uuid, group_uuid):
@@ -271,7 +270,6 @@ class CommandSequencer:
                 return False
             else:
                 self.process_group_tasks.pop(group_uuid)
-                self.process_tasks.remove(group_uuid)
                 return True
         except ValueError as error:
             raise CommandSequenceError('Empty process task list while trying to remove group {} and task {}'.format(group_uuid, task_uuid))
