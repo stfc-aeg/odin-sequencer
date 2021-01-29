@@ -61,16 +61,15 @@ class ProcessWriter():
     Adapter which exposes the underlying Command Sequencer.
     """
 
-    def run(self, function, *args):
+    def run(self, function, ignore_result, *args):
         """This method calls the celery task _run with the given function name and arguments.
         :param function: Name of function from 'tasks.py'
         :param *args: Arguments for the given function
         """
-        # {'shadow':function}
         logging.debug(args)
-        return self._run.apply_async(args=(function, args))
+        return self._run.apply_async(args=(function, args), ignore_results=ignore_result)
 
-    def group(self, function, iterator, *args):
+    def group(self, function, ignore_result, iterator, *args):
         """This method calls a group of celery task _run with the given function name and arguments.
         :param function: Name of function from 'tasks.py'
         :param iterator: Iterator for the group function
@@ -79,19 +78,22 @@ class ProcessWriter():
         for i in iterator:
             signatures.append(
                 self._run.signature(
-                    args=(function, self.list_append([i], *args)),
+                    args=(
+                        function, 
+                        self.list_append([i], *args) if args else [i]
+                    ),
                 )
             )
         task_group = group(signatures)
-        return task_group.apply_async()
+        return task_group.apply_async(ignore_results = ignore_result)
 
     @process_queue.task(bind=True)
     def _run(self, function, args):
         """This method runs the given function with the given arguments.
         :param function: Name of function from 'tasks.py'
-        :param *args: Arguments for the given function
+        :param args: Arguments for the given function
         # """
-        group_uuid = hash(self.request.group) if self.request.group else None
+        group_uuid = self.request.group if self.request.group else None
         task_uuid = self.request.id
 
         if group_uuid:
@@ -123,7 +125,7 @@ class ProcessWriter():
                     task_uuid = task_uuid, 
                     task_name = function
                 )
-        except:
+        except Exception as e:
             if group_uuid:
                 self.send_event(
                     'failed-group-task', 
@@ -137,7 +139,7 @@ class ProcessWriter():
                     task_uuid = task_uuid, 
                     task_name = function
                 )
-        return result
+            raise e
 
     def list_append(self, lst, item):
         """This method returns the given list with item appened.
