@@ -4,7 +4,26 @@ from unittest.mock import Mock, MagicMock, patch
 
 from odin_sequencer import CommandSequenceError
 from src.odin_sequencer.adapter import CommandSequenceManagerAdapter
+import pytest
 
+@pytest.fixture
+def context_object():
+    """
+    Test fixture for creating a simple container object that can be loaded into
+    the sequence manager context and accessed for test.
+    """
+
+    class ContextObject():
+        """An example of a context object"""
+
+        def __init__(self, value):
+            self.value = value
+
+        def increment(self, val):
+            """Increments a given value by 1"""
+            return val + 1
+
+    return ContextObject(255374)
 
 class TestCommandSequenceManagerAdapter:
 
@@ -86,3 +105,12 @@ class TestCommandSequenceManagerAdapter:
         self.command_sequencer_mock.set.assert_not_called()
 
         json_decode_mock.reset_mock(return_value=True, side_effect=True)
+
+
+    def test_add_context(self, context_object):
+
+        obj_name = 'context_object'
+        self.adapter.add_context(obj_name, context_object)
+        
+        self.command_sequencer_mock._add_context.assert_called_once_with(obj_name, context_object)
+        self.command_sequencer_mock.get.reset_mock(return_value=True, side_effect=True)

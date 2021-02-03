@@ -36,6 +36,8 @@ class CommandSequencer:
         self.module_reload_failed = False
         self.execute_seq_name = ''
         self.is_executing = False
+        self.process_tasks = []
+        self.process_group_tasks = {}
         self.log_messages = []
         self.last_message_timestamp = ''
         self.param_tree = self._build_param_tree()
@@ -43,6 +45,7 @@ class CommandSequencer:
         self.log_messages_deque = deque(maxlen=250)
         self.manager.register_external_logger(self.log)
         self.thread = None
+        self.process_monitor_thread = None
 
     def _build_param_tree(self):
         """Builds the parameter tree and as well as being called in the constructor, it is
@@ -58,6 +61,7 @@ class CommandSequencer:
             'reload': (lambda: self.reload, self.set_reload),
             'execute': (lambda: self.execute_seq_name, self.execute_sequence),
             'is_executing': (lambda: self.is_executing, None),
+            'process_tasks': (lambda: self.process_tasks, None),
             'log_messages': (lambda: self.log_messages, None),
             'last_message_timestamp': (lambda: self.last_message_timestamp, self.get_log_messsages)
         })
@@ -224,9 +228,52 @@ class CommandSequencer:
         self.thread.start()
 
     def _execute(self, seq_name, **kwargs):
-        self.manager.execute(seq_name, **kwargs)
-        self.is_executing = False
+        try:
+            self.manager.execute(seq_name, **kwargs)
+        except CommandSequenceError as error:
+            self.manager.log_message('<b style="color:red">Execution error</b>: {}: {}'.format(seq_name, error))
+            raise CommandSequenceError('A problem occurred during the execution of {}: {}'.format(seq_name, error))
+        finally:
+            self.is_executing = False
 
+    def start_process_task(self, task_uuid):
+        """Add task uuid to the process_tasks list"""
+        self.process_tasks.append(task_uuid)
+
+    def finish_process_task(self, task_uuid):
+        """Remove task uuid from the process_tasks list"""
+        try:
+            self.process_tasks.remove(task_uuid)
+        except ValueError as error:
+            raise CommandSequenceError('Empty process task list while trying to remove {}'.format(task_uuid))
+
+    def start_process_group_task(self, task_uuid, group_uuid):
+        """
+        Add task uuid to the process_group_tasks dictionary if it's the first group task
+        add the group uuid to the process_tasks list
+        """
+        if group_uuid in self.process_group_tasks.keys():
+            self.process_group_tasks[group_uuid].append(task_uuid)
+            return False
+        else:
+            self.process_group_tasks[group_uuid] = [task_uuid]
+            return True
+
+    def finish_process_group_task(self, task_uuid, group_uuid):
+        """
+        Remove task uuid from the process_group_tasks dictionary if it's the last group task
+        remove the group uuid from the process_tasks list
+        """
+        try:
+            if len(self.process_group_tasks[group_uuid]) > 1:
+                self.process_group_tasks[group_uuid].remove(task_uuid)
+                return False
+            else:
+                self.process_group_tasks.pop(group_uuid)
+                return True
+        except ValueError as error:
+            raise CommandSequenceError('Empty process task list while trying to remove group {} and task {}'.format(group_uuid, task_uuid))
+    
     def log(self, *args, **kwargs):
         """This method is register as an external logger with the manager. Doing this results
         in all the print messages in the loaded sequences to be passed to this method. The method
@@ -299,6 +346,15 @@ class CommandSequencer:
             list_val = map(self._val_to_float, list_val)
 
         return list(list_val)
+    
+    def _add_context(self, name, obj):
+        """This method adds an object to the manager context."""
+        self.manager.add_context(name, obj)
+
+    def _start_process_monitor(self, process_monitor):
+        """Start thread in background for the process monitor."""
+        self.process_monitor_thread = threading.Thread(target=process_monitor, args=(self.log, self.start_process_task, self.finish_process_task, self.start_process_group_task, self.finish_process_group_task), daemon=True)
+        self.process_monitor_thread.start()    
 
     @staticmethod
     def _val_to_bool(val):

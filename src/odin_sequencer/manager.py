@@ -531,6 +531,8 @@ class CommandSequenceManager:
             raise CommandSequenceError(
                 'Missing command sequence: {}'.format(sequence_name)
             )
+        except CommandSequenceError as error:
+            raise error
 
     def add_context(self, name, obj):
         """Add an object to the manager context.

@@ -24,6 +24,7 @@ $(document).ready(function () {
         if (is_executing) {
             disable_buttons(`${BUTTON_ID['all_execute']},${BUTTON_ID['reload']}`, true);
             await_execution_complete();
+            await_process_execution_complete();
         }
 
         set_detect_module_changes_toggle(detect_module_modifications);
@@ -150,6 +151,7 @@ function execute_sequence(button) {
             });
 
             setTimeout(await_execution_complete, 250);
+            setTimeout(await_process_execution_complete, 500);
         }).fail(function (jqXHR) {
             error_message = extract_error_message(jqXHR);
             if (error_message.startsWith('Type mismatch updating')) {
@@ -170,6 +172,8 @@ function execute_sequence(button) {
         });
 
         setTimeout(await_execution_complete, 250);
+        setTimeout(await_process_execution_complete, 500);
+        
     }
 }
 
@@ -237,6 +241,21 @@ function await_execution_complete() {
             setTimeout(await_execution_complete, 1000);
         } else {
             disable_buttons(`${BUTTON_ID['all_execute']},${BUTTON_ID['reload']}`, false);
+        }
+    });
+}
+
+/**
+ * This function waits for the execution of a process task to complete by calling
+ * itself if the process is not finished. It calls the display_log_messages to 
+ * display any log messages.
+ */
+function await_process_execution_complete() {
+    apiGET('process_tasks').then(function (response) {
+        display_log_messages();
+        process_tasks = response.process_tasks
+        if (process_tasks.length != 0) {
+            setTimeout(await_process_execution_complete, 500);
         }
     });
 }

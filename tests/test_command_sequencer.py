@@ -21,6 +21,24 @@ def create_command_sequencer(create_paths):
 
     return _create_command_sequencer
 
+@pytest.fixture
+def context_object():
+    """
+    Test fixture for creating a simple container object that can be loaded into
+    the sequence manager context and accessed for test.
+    """
+
+    class ContextObject():
+        """An example of a context object"""
+
+        def __init__(self, value):
+            self.value = value
+
+        def increment(self, val):
+            """Increments a given value by 1"""
+            return val + 1
+
+    return ContextObject(255374)
 
 def _await_execution_complete(command_sequencer):
     for _ in range(15, 0, -1):
@@ -496,6 +514,37 @@ def test_execute_sequence_with_missing_sequence(create_command_sequencer):
     assert command_sequencer.is_executing is False
 
 
+def test_start_process_task(create_command_sequencer):
+    uuid = 'uuid'
+    command_sequencer = create_command_sequencer()
+    
+    command_sequencer.start_process_task(uuid)
+    process_tasks = command_sequencer.process_tasks
+
+    assert process_tasks == [uuid]
+
+
+def test_finish_process_task(create_command_sequencer):
+    uuid = 'uuid'
+    command_sequencer = create_command_sequencer()
+    command_sequencer.process_tasks = [uuid]
+    
+    command_sequencer.finish_process_task(uuid)
+    process_tasks = command_sequencer.process_tasks
+
+    assert process_tasks == []
+
+
+def test_finish_process_task_with_empty_process_tasks_list(create_command_sequencer):
+    uuid = 'uuid'
+    command_sequencer = create_command_sequencer()
+
+    with pytest.raises(
+            CommandSequenceError, match='Empty process task list while trying to remove {}'.format(uuid)
+    ):
+        command_sequencer.finish_process_task(uuid)
+
+
 def test_get_log_messages_with_no_last_message_timestamp(shared_datadir, create_command_sequencer,
                                                          create_tmp_module_files):
 
@@ -526,3 +575,14 @@ def test_get_log_messages_with_last_message_timestamp(create_command_sequencer,
 
     assert len(log_messages) == 1
     assert log_messages[0][1] == 'Executing get_message'
+
+
+def test_add_context(create_command_sequencer, context_object):
+
+    command_sequencer = create_command_sequencer()
+    obj_name = 'context_object'
+    command_sequencer._add_context(obj_name, context_object)
+
+    assert obj_name in command_sequencer.manager.context
+    assert id(context_object) == id(command_sequencer.manager._get_context(obj_name))
+    assert context_object.value == command_sequencer.manager._get_context(obj_name).value
