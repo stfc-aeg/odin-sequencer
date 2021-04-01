@@ -525,14 +525,16 @@ class CommandSequenceManager:
             if modified_module_paths:
                 self.reload(modified_module_paths)
 
-        try:
-            return getattr(self, sequence_name)(*args, **kwargs)
-        except AttributeError:
-            raise CommandSequenceError(
+        if not hasattr(self, sequence_name):
+            raise  CommandSequenceError(
                 'Missing command sequence: {}'.format(sequence_name)
             )
+        try:
+            return getattr(self, sequence_name)(*args, **kwargs)
         except CommandSequenceError as error:
             raise error
+        except:
+            raise CommandSequenceError(sys.exc_info()[1])
 
     def add_context(self, name, obj):
         """Add an object to the manager context.

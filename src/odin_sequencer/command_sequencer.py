@@ -5,7 +5,7 @@ Module which facilitates communication to the command sequencer manager.
 Viktor Bozhinov, STFC.
 """
 
-
+import logging
 import threading
 
 from collections import deque
@@ -232,7 +232,7 @@ class CommandSequencer:
             self.manager.execute(seq_name, **kwargs)
         except CommandSequenceError as error:
             self.manager.log_message('<b style="color:red">Execution error</b>: {}: {}'.format(seq_name, error))
-            raise CommandSequenceError('A problem occurred during the execution of {}: {}'.format(seq_name, error))
+            logging.error("Sequence execution error: {}: {}".format(seq_name, error))
         finally:
             self.is_executing = False
 
