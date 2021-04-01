@@ -304,9 +304,11 @@ function display_log_messages() {
         if (!jQuery.isEmptyObject(log_messages)) {
             last_message_timestamp = log_messages[log_messages.length - 1][0];
 
+            pre_scrollable_id = '#log-messages';
             for (log_message in log_messages) {
-                pre_scrollable_id = '#log-messages';
-                $(pre_scrollable_id).append(`<span style="color:#007bff">${log_messages[log_message][0]}</span> ${log_messages[log_message][1]}<br>`);
+                timestamp = log_messages[log_message][0];
+                timestamp = timestamp.substr(0, timestamp.length - 3);
+                $(pre_scrollable_id).append(`<span style="color:#007bff">${timestamp}</span> ${log_messages[log_message][1]}<br>`);
                 // Scrolls down
                 $(pre_scrollable_id).animate({ scrollTop: $(pre_scrollable_id).prop('scrollHeight') }, 1000);
             }
