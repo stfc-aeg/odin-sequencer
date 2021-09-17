@@ -27,10 +27,9 @@ class CommandSequencer:
         sequencer manager, and building a parameter tree for it which allows clients
         to communicate with the manager.
         """
-        self.manager = CommandSequenceManager(path_or_paths)
-        # path_or_oaths needed for when some modules fail to reload
-        self.path_or_paths = list(self.manager.file_paths.values())
-        self.sequence_modules = self.manager.sequence_modules
+
+        self.initial_path_or_paths = path_or_paths
+
         self.detect_module_modifications = False
         self.reload = False
         self.module_reload_failed = False
@@ -40,12 +39,41 @@ class CommandSequencer:
         self.process_group_tasks = {}
         self.log_messages = []
         self.last_message_timestamp = ''
-        self.param_tree = self._build_param_tree()
-
-        self.log_messages_deque = deque(maxlen=250)
-        self.manager.register_external_logger(self.log)
         self.thread = None
         self.process_monitor_thread = None
+
+        self.log_messages_deque = deque(maxlen=250)
+        self.path_or_paths = []
+        self.sequence_modules = {}
+
+        self.manager = CommandSequenceManager()
+        self.manager.register_external_logger(self.log)
+        self.manager_initialised = False
+        self._initialise_manager()
+
+        self.param_tree = self._build_param_tree()
+
+    def _initialise_manager(self, raise_on_error=False):
+        """Initialises the command sequence manager and sets up paramters accordingly. This is
+        called during initialisation of the CommandSequencer or subsequently on reload if the
+        manager has not been correctly initialised before. This allows the CommandSequencer to
+        instantiate a valid manager even if there are errors in the sequences.
+        """
+
+        try:
+            self.manager.load(self.initial_path_or_paths)
+            self.manager.resolve()
+            # path_or_paths needed for when some modules fail to reload
+            self.path_or_paths = list(self.manager.file_paths.values())
+            self.sequence_modules = self.manager.sequence_modules
+            self.manager_initialised = True
+        except CommandSequenceError as e:
+            err_msg = "Failed to load command sequence manager: {}".format(e)
+            self.log(err_msg)
+            logging.error(err_msg)
+            if raise_on_error:
+                raise CommandSequenceError(err_msg)
+
 
     def _build_param_tree(self):
         """Builds the parameter tree and as well as being called in the constructor, it is
@@ -135,13 +163,20 @@ class CommandSequencer:
 
     def set_reload(self, reload):
         """This method attempts to start the reloading process if True is passed to it. It takes
-        different routes depending on different states. If module modifications process is enabled,
+        different routes depending on different states. If the manager has not yet been correctly
+        initialised, that is attemped first. Otherwise, if module modifications process is enabled,
         it reloads the loaded modules that get modified during the process, otherwise it reloads
         all the loaded modules. An exception is raised if a problem occurs during the reloading
         process and sets module_reload_failed to True. The _build_param_tree is called regardless
         of the outcome of the reloading process. Exceptions are also raised if there are no
         modules loaded in the manager or a sequence is being executed.
         """
+
+        if not self.manager_initialised:
+            self._initialise_manager(True)
+            self.param_tree = self._build_param_tree()
+            return
+
         sequence_modules = self.param_tree.get('sequence_modules')['sequence_modules']
         if not sequence_modules:
             raise CommandSequenceError(
