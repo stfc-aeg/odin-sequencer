@@ -77,6 +77,9 @@ class CommandSequenceManager:
 
         for path in path_or_paths:
 
+            if not path:
+                continue
+
             if not isinstance(path, Path):
                 path = Path(path)
 
