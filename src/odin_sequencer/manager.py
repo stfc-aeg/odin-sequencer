@@ -124,7 +124,8 @@ class CommandSequenceManager:
             sequences = {}
             for seq_name in provides:
                 # Do not load the sequence if one with the same name has already been registered
-                if any(seq_name in val for val in self.provides.values()):
+                if (any(seq_name in val for val in self.provides.values()) or   # Other files
+                        seq_name in sequences.keys()):                          # This file
                     raise CommandSequenceError(
                         "Unable to load sequence '{}' from module '{}' as a sequence with the "
                         "same name has already being registered".format(seq_name, module_name)
