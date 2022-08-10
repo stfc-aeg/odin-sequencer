@@ -12,7 +12,8 @@ const ALERT_ID = {
 
 const BUTTON_ID = {
     'all_execute': '.execute-btn',
-    'reload': '#reload-btn'
+    'reload': '#reload-btn',
+    'abort': '#abort-btn'
 };
 
 /**
@@ -36,8 +37,13 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (is_executing) {
             disable_buttons(`${BUTTON_ID['all_execute']},${BUTTON_ID['reload']}`, true);
+            disable_buttons(`${BUTTON_ID['abort']}`, false);
             await_execution_complete();
             await_process_execution_complete();
+        }
+        else
+        {
+            disable_buttons(`${BUTTON_ID['abort']}`, true);
         }
 
         set_detect_module_changes_toggle(detect_module_modifications);
@@ -134,6 +140,24 @@ function reload_modules() {
     });
 }
 
+function abort_sequence() {
+    hide_alerts(`${ALERT_ID['sequencer_info']},${ALERT_ID['sequencer_error']}`);
+
+    alert_id = '';
+    alert_message = '';
+    sequencer_endpoint.put({ 'abort': true })
+    .then(() => {
+        alert_id = ALERT_ID['sequencer_info'];
+        alert_message = "Abort sent to currently executing sequence";
+    })
+    .catch(error => {
+        alert_id = ALERT_ID['sequencer_error'];
+        alert_message = error.message;
+    })
+    .then(() => {
+        display_alert(alert_id, alert_message);
+    });
+}
 /**
  * This function replicates the equivalent jQuery isEmptyObject, returning true if the
  * object passed as an parameter is empty.
@@ -166,6 +190,7 @@ function execute_sequence(button) {
         .then(() => {
             hide_alerts(`${ALERT_ID['sequencer_info']},${ALERT_ID['sequencer_error']},.sequence-alert`);
             disable_buttons(`${BUTTON_ID['all_execute']},${BUTTON_ID['reload']}`, true);
+            disable_buttons(`${BUTTON_ID['abort']}`, false);
 
             sequencer_endpoint.put({ 'execute': seq_name })
             .catch(error => {
@@ -193,7 +218,8 @@ function execute_sequence(button) {
         });
 
     } else {
-        disable_buttons(`${BUTTON_ID['all_execute']},${BUTTON_ID['reload']}`, true)
+        disable_buttons(`${BUTTON_ID['all_execute']},${BUTTON_ID['reload']}`, true);
+        disable_buttons(`${BUTTON_ID['abort']}`, false);
         sequencer_endpoint.put({ 'execute': seq_name })
         .catch(error => {
             alert_message = error.message;
@@ -271,6 +297,7 @@ function await_execution_complete() {
             setTimeout(await_execution_complete, 1000);
         } else {
             disable_buttons(`${BUTTON_ID['all_execute']},${BUTTON_ID['reload']}`, false);
+            disable_buttons(`${BUTTON_ID['abort']}`, true);
         }
     });
 }
