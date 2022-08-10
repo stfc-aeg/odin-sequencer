@@ -1,5 +1,7 @@
 requires = ['spi_commands']
-provides = ['test_sequence', 'another_sequence']
+provides = ['test_sequence', 'another_sequence', 'abortable_sequence']
+
+import time
 
 def test_sequence(a_val=123, b='hello'):
 
@@ -30,3 +32,14 @@ def test_sequence(a_val=123, b='hello'):
 def another_sequence(c_val=False, d=1.234):
 
     pass
+
+def abortable_sequence(num_loops=10, loop_delay=1.0001):
+
+    for i in range(num_loops):
+        print("Loop count {}".format(i))
+        time.sleep(loop_delay)
+        if abort_sequence():
+            print("Aborting sequence")
+            break
+
+    print("Sequence complete")
