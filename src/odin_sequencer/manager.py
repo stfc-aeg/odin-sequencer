@@ -51,6 +51,7 @@ class CommandSequenceManager:
         self.module_watching = False
         self.auto_reload = False
         self.external_logger = None
+        self._abort_sequence = False
 
         # If one or more files have been specified, attempt to load and resolve them
         if path_or_paths:
@@ -162,6 +163,7 @@ class CommandSequenceManager:
             # Set the manager context as an attribute of the module to allow access to external
             # functionality
             setattr(module, 'get_context', self._get_context)
+            setattr(module, 'abort_sequence', lambda: self._abort_sequence)
 
             # Add the module information to the manager
             self.modules[module_name] = module
@@ -590,3 +592,11 @@ class CommandSequenceManager:
             raise AttributeError("Manager has no attribute '{}'".format(name))
 
         return getattr(self, name)
+
+    @property
+    def abort_sequence(self):
+        return self._abort_sequence
+
+    @abort_sequence.setter
+    def abort_sequence(self, abort):
+        self._abort_sequence = abort

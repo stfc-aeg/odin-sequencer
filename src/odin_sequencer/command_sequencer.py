@@ -89,6 +89,8 @@ class CommandSequencer:
             'reload': (lambda: self.reload, self.set_reload),
             'execute': (lambda: self.execute_seq_name, self.execute_sequence),
             'is_executing': (lambda: self.is_executing, None),
+            'abort': (None, self.abort_sequence),
+            'is_aborting': (lambda: self.manager.abort_sequence, None),
             'process_tasks': (lambda: self.process_tasks, None),
             'log_messages': (lambda: self.log_messages, None),
             'last_message_timestamp': (lambda: self.last_message_timestamp, self.get_log_messsages)
@@ -270,6 +272,20 @@ class CommandSequencer:
             logging.error("Sequence execution error: {}: {}".format(seq_name, error))
         finally:
             self.is_executing = False
+            if self.manager.abort_sequence:
+                self.manager.log_message(
+                    '<span style="color:orange">Execution of sequence "{}" aborted</span>'.format(seq_name)
+                )
+                logging.info("Execution of sequence {} aborted".format(seq_name))
+                self.manager.abort_sequence = False
+
+    def abort_sequence(self, abort):
+
+        if abort and not self.is_executing:
+            raise CommandSequenceError("Cannot abort when no sequence is executing")
+
+        logging.debug("Aborting sequence with value {}".format(abort))
+        self.manager.abort_sequence = abort
 
     def start_process_task(self, task_uuid):
         """Add task uuid to the process_tasks list"""
