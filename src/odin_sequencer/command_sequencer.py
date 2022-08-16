@@ -89,6 +89,7 @@ class CommandSequencer:
             'reload': (lambda: self.reload, self.set_reload),
             'execute': (lambda: self.execute_seq_name, self.execute_sequence),
             'is_executing': (lambda: self.is_executing, None),
+            'execution_progress': (lambda: self.manager.progress, None),
             'abort': (None, self.abort_sequence),
             'is_aborting': (lambda: self.manager.abort_sequence, None),
             'process_tasks': (lambda: self.process_tasks, None),
@@ -256,11 +257,18 @@ class CommandSequencer:
         if not any(seq_name in seq_module for seq_module in sequence_modules.values()):
             raise CommandSequenceError('Missing command sequence: {}'.format(seq_name))
 
-        seq = next((seq_module[seq_name] for seq_module in sequence_modules.values() if
-                    seq_name in seq_module), None)
+        (seq_mod, seq) = next(
+            ((mod_name, seq_module[seq_name])
+                for (mod_name, seq_module) in sequence_modules.items() if
+                    seq_name in seq_module
+            ),
+            None
+        )
 
         kwargs = self._get_seq_param_values(seq)
+        self.manager.reset_progress()
         self.is_executing = True
+        self.execute_seq_name = seq_mod + "/" + seq_name
         self.thread = threading.Thread(target=self._execute, args=(seq_name,), kwargs=kwargs)
         self.thread.start()
 
@@ -272,6 +280,7 @@ class CommandSequencer:
             logging.error("Sequence execution error: {}: {}".format(seq_name, error))
         finally:
             self.is_executing = False
+            self.execute_seq_name = ""
             if self.manager.abort_sequence:
                 self.manager.log_message(
                     '<span style="color:orange">Execution of sequence "{}" aborted</span>'.format(seq_name)
