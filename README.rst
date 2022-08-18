@@ -87,7 +87,7 @@ exposed to every loaded sequence module. If `true` the sequence can be cleanly t
 How to report progress in an executing sequence
 -----------------------------------------------
 
-Executing sequences can report progress to the user by calling the :code:`report_progress` function,
+Executing sequences can report progress to the user by calling the :code:`set_progress` function,
 which is exposed to every loaded sequence module. This takes two arguments reporting the `current`
 and `total` steps in the sequence. This is used by the API and UI to display progress. (See
 example_sequences.py for an example.)

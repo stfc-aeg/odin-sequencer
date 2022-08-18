@@ -228,7 +228,7 @@ function execute_sequence(button) {
     } else {
         disable_buttons(`${BUTTON_ID['all_execute']},${BUTTON_ID['reload']}`, true);
         disable_buttons(`${BUTTON_ID['abort']}`, false);
-        hide_execution();
+        display_execution(`${seq_module_name}/${seq_name}`);
         sequencer_endpoint.put({ 'execute': seq_name })
         .catch(error => {
             alert_message = error.message;
@@ -385,7 +385,6 @@ function update_execution_progress()
 {
     sequencer_endpoint.get('execution_progress')
     .then(result => {
-        console.log(result)
         var current = result.execution_progress.current;
         var total = result.execution_progress.total;
         if (total != -1)

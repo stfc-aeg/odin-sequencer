@@ -1,5 +1,5 @@
 requires = ['spi_commands']
-provides = ['test_sequence', 'another_sequence', 'abortable_sequence']
+provides = ['test_sequence', 'another_sequence', 'abortable_sequence', 'no_params']
 
 import time
 
@@ -48,3 +48,11 @@ def abortable_sequence(num_loops=100, loop_delay=0.1):
             break
 
     print("Sequence complete")
+
+def no_params():
+
+    set_progress(0, 10)
+
+    for i in range(10):
+        time.sleep(1.0)
+        set_progress(1+1, 10)
