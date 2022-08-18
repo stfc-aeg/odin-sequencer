@@ -77,6 +77,20 @@ The context can now be used in a sequence by calling :code:`get_context` (see ex
 
     dev = get_context('test_device')
 
+How to abort an executing sequence
+----------------------------------
+
+Long-running sequences can choose to check the value of the :code:`abort_sequence()` function, which is
+exposed to every loaded sequence module. If `true` the sequence can be cleanly terminated early.
+(See example_sequences.py for an example of an abortable sequence.)
+
+How to report progress in an executing sequence
+-----------------------------------------------
+
+Executing sequences can report progress to the user by calling the :code:`set_progress` function,
+which is exposed to every loaded sequence module. This takes two arguments reporting the `current`
+and `total` steps in the sequence. This is used by the API and UI to display progress. (See
+example_sequences.py for an example.)
 
 How to start a local process worker
 -----------------------------------

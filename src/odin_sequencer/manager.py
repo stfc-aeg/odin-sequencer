@@ -52,6 +52,9 @@ class CommandSequenceManager:
         self.auto_reload = False
         self.external_logger = None
         self._abort_sequence = False
+        self._progress = {}
+
+        self.reset_progress()
 
         # If one or more files have been specified, attempt to load and resolve them
         if path_or_paths:
@@ -164,6 +167,7 @@ class CommandSequenceManager:
             # functionality
             setattr(module, 'get_context', self._get_context)
             setattr(module, 'abort_sequence', lambda: self._abort_sequence)
+            setattr(module, 'set_progress', self.set_progress)
 
             # Add the module information to the manager
             self.modules[module_name] = module
@@ -595,8 +599,59 @@ class CommandSequenceManager:
 
     @property
     def abort_sequence(self):
+        """Get the value of the abort_sequence flag.
+
+        This property method returns the value of the abort sequence flag, which is exposed
+        as a function to all loaded sequence modules. Testing the value of this flag allows
+        sequences to abort operation (e.g. break out of a loop) when requested by the user.
+
+        :return: boolean flag, true if a sequence abort has been requested
+        """
         return self._abort_sequence
 
     @abort_sequence.setter
     def abort_sequence(self, abort):
+        """Set the value of the abort_sequence flag.
+
+        This setter sets the value of the abort sequence flag, which is exposed as a function to all
+        loaded sequence modules. This setter is typically called under user request via the
+        command sequencer API or user interface.
+
+        :param abort: boolean abort flag, set to true to abort sequence
+        """
         self._abort_sequence = abort
+
+    @property
+    def progress(self):
+        """Get the current sequence execution progress.
+
+        This propery method returns the sequence progress data as a dictionary, populated with
+        current and total sequence steps. This is used by the command sequencer, API and user
+        interface to report current progress to the user.
+
+        :return: dict of current and total steps in progress of a sequence
+        """
+        return self._progress
+
+    def set_progress(self, current, total):
+        """Set the current sequence execution progress.
+
+        This propery method set the progress of the current sequence as current and total steps. It
+        is exposed as a function to all sequence modules, allowing long-running sequences to report
+        their progress through loops.
+
+        :param current: current step
+        :param total: total steps in sequence
+        """
+        self._progress["current"] = current
+        self._progress["total"] = total
+
+    def reset_progress(self):
+        """Reset the current sequence execution progress.
+
+        This method resets the sequence execution progress to default values. This is typically
+        called by the commands sequencer before execution. If a sequence then fails to report its
+        progress these values remain unchanged and can be handlede accordingly by any UI.
+        """
+        self._progress["current"] = -1
+        self._progress["total"] = -1
