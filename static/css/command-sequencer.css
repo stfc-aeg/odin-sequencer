@@ -34,3 +34,10 @@
 [data-bs-toggle="collapse"].collapsed:after {
     transform: rotate(0deg);
 }
+
+.sticky{
+    height: 100%;
+    width: 48%;
+    float:right;
+    position: fixed;
+}
