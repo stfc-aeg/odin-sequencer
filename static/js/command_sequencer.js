@@ -63,6 +63,19 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 });
 
+const log = document.getElementById("log")
+const test = document.getElementById("Test")
+log.textContent = "HELLO"
+test.addEventListener("keydown", logKey)
+
+function logKey(e) {
+    log.textContent += ` ${e.code}`
+    console.log("Key detected", e.code)
+}
+
+
+
+
 /**
  * This is called when a change in the Detect Changes toggle is detected. Depending on
  * whether the toggle was enabled or disabled, it calls the mechanism on the backend to
@@ -192,6 +205,7 @@ function execute_sequence(button) {
     if (!is_empty_object(params)) {
         
         data = get_input_parameter_values(params);
+        console.log("DATA", data)
         
         sequencer_endpoint.put(data, `sequence_modules/${seq_module_name}/${seq_name}`)
         .then(() => {
@@ -476,15 +490,21 @@ function build_sequence_modules_layout() {
             // Sort the modules in alphabetical order
             sequence_modules = Object.fromEntries(Object.entries(sequence_modules).sort());
             let html_text = `<div id="accordion" role="tablist">`;
+            // Does this for each module
+            // build_sequences_layout enters stuff for each sequence within a module
             for (seq_module in sequence_modules) {
                 sequences = sequence_modules[seq_module];
-
+                // 501 needs to be a button, 506 needs to be collapsible
                 html_text += `
                 <div class="row border">
                     <div class="col-md-12">
                         <div class="row">
                             <div class="col-md-12 text-center">
-                                <h4><b>${seq_module}</b></h4>
+                                <a data-bs-toggle="collapse" href="#${seq_module}-collapse" aria-expanded="false"
+                                    aria-controls="${seq_module}-collapse" class="collapsed">
+                                    ${seq_module}
+                                </a>
+
                             </div>
                         </div>
                         <div class="row mb-3">
@@ -510,46 +530,116 @@ function build_sequence_modules_layout() {
  * element if the sequence has parameters. 
  */
 function build_sequences_layout(seq_module, sequences) {
-    html_text = '';
+    let html_text = `
+    <div id="${seq_module}-collapse" class="collapse" role="tabpanel" aria-labelledby="${seq_module}-heading" data-parent="#accordion">
+        <div class="card-body">`;
+
+        // html_text = '';
+    // console.log("SEQUENCES", sequences)
+    // Does this for EACH sequence within a module
+    count = 0
     for (seq in sequences) {
         params = sequences[seq];
+        // console.log("SEQ", seq, params)
+        // if (count%4 == 0) {
+        //     html_text += `
+        //         <div class="row">
+        //         `
+        // }
 
-        html_text += `
-        <div class="card">
-            <div class="card-header" role="tab" id="${seq}-heading">
-                <div class="row">
-                    <div class="col-md-5">
-                        <h5>`;
-
-        sequence_params_layout = '';
         if (is_empty_object(params)) {
-            html_text += `${seq}`;
-        } else {
             html_text += `
-            <a data-bs-toggle="collapse" href="#${seq}-collapse" aria-expanded="false"
-               aria-controls="${seq}-collapse" class="collapsed">
-                ${seq}
-            </a>`;
-            sequence_params_layout = build_sequence_parameters_layout(seq, params);
-        }
+            <div class="row">
+                <button type="submit" class="btn btn-primary" onclick="execute_sequence(this)" id="${seq_module}-${seq}-execute-btn">${String(seq).replace("_", " ")}</button>
+            </div>
+            `
+        } else {
+            sequence_params_layout = build_sequence_parameters_layout_alt(seq, params)
+            html_text += `
+                <div class="row">
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#${seq_module}-${seq}-modal">${seq}</button>
 
-        html_text += `
-                        </h5>
-                    </div>
-                    <div class="col-md-5">
-                        <div class="sequence-alert alert alert-danger mb-0 d-none" role="alert" id="${seq}-alert"></div>
-                    </div>
-                    <div class="col-md-2">
-                        <button type="submit" class="btn btn-primary execute-btn mb-3" onclick="execute_sequence(this)" id="${seq_module}-${seq}-execute-btn">Execute</button>
+                    <div class="modal fade" id="${seq_module}-${seq}-modal" tabindex="-1" role="dialog" aria-labelledby="${seq_module}-${seq}-modal-label" aria-hidden="true" style="height: 500px">
+                        <div class="modal-dialog" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <div class="modal-title" id="${seq_module}-${seq}-modal-label">${seq}</div>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    ${sequence_params_layout}
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal" onclick="execute_sequence(this)" id="${seq_module}-${seq}-execute-btn">Execute</button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
-            ${sequence_params_layout}
-        </div>`;
+
+
+
+            `
+        }
+    // html_text += `
+    //         </div>
+    //     </div>`
+
+
+        // html_text += `
+        //     <button type="submit" class="btn btn-primary" onclick="execute_sequence(this)" id="${seq_module}-${seq}-execute-btn">Test</button>
+        // `
+
+        count += 1
+
+        // if (count % 4 == 0) {
+        //     html_text += `
+        //         </div>
+        //     `
+        // }
+
+    //     html_text += `
+    //     <div class="card">
+    //         <div class="card-header" role="tab" id="${seq}-heading">
+    //             <div class="row">
+    //                 <div class="col-md-5">
+    //                     <h5>`;
+
+    //     sequence_params_layout = '';
+    //     if (is_empty_object(params)) {
+    //         html_text += `${seq}`;
+    //     } else {
+    //         // This adds function dropdown, causing expansion/collapse
+    //         html_text += `
+    //         <a data-bs-toggle="collapse" href="#${seq}-collapse" aria-expanded="false"
+    //            aria-controls="${seq}-collapse" class="collapsed">
+    //             ${seq}
+    //         </a>`;
+    //         sequence_params_layout = build_sequence_parameters_layout(seq, params);
+    //     }
+    //     // Here, the text is added for the button
+    //     html_text += `
+    //                     </h5>
+    //                 </div>
+    //                 <div class="col-md-5">
+    //                     <div class="sequence-alert alert alert-danger mb-0 d-none" role="alert" id="${seq}-alert"></div>
+    //                 </div>
+    //                 <div class="col-md-2">
+    //                     <button type="submit" class="btn btn-primary execute-btn mb-3" onclick="execute_sequence(this)" id="${seq_module}-${seq}-execute-btn">Execute</button>
+    //                 </div>
+    //             </div>
+    //         </div>
+    //         ${sequence_params_layout}
+    //     </div>`;
     }
 
     return html_text;
 }
+
+
+    function create_popup_window() {
+
+    }
 
 /**
  * This function builds the input boxes for all the parameters of the sequence. A
@@ -557,9 +647,12 @@ function build_sequences_layout(seq_module, sequences) {
  * provides information to users about how they need to input the list elements.
  */
 function build_sequence_parameters_layout(seq, params) {
-    let html_text = `
-    <div id="${seq}-collapse" class="collapse" role="tabpanel" aria-labelledby="${seq}-heading" data-parent="#accordion">
-        <div class="card-body">`;
+    // let html_text = `
+    // <div id="${seq}-collapse" class="collapse" role="tabpanel" aria-labelledby="${seq}-heading" data-parent="#accordion">
+    //     `
+    
+    // <div class="card-body">`;
+    let html_text = ``
     for (param in params) {
         attributes = params[param];
         param_type = attributes['type'];
@@ -597,6 +690,53 @@ function build_sequence_parameters_layout(seq, params) {
     html_text += `
         </div>
     </div>`;
+
+    return html_text;
+}
+
+function build_sequence_parameters_layout_alt(seq, params) {
+
+    let html_text = ``
+    // let html_text = `
+    // <div id="${seq}-collapse" class="collapse" role="tabpanel" aria-labelledby="${seq}-heading" data-parent="#accordion">
+    // `
+    for (param in params) {
+        attributes = params[param];
+        param_type = attributes['type'];
+        param_default_value = attributes['default'];
+
+        html_text += `
+        <div class="row">
+            <div class="col-md-4">
+                <label for="${seq}-${param}-input">${param} (${param_type})</label>`;
+
+        if (param_type.startsWith('list')) {
+            html_text += '<i class="far fa-question-circle fa-fw my-tooltip" title="Enter elements as a comma separate string and do not include quotes or square brackets"></i>';
+        }
+
+        html_text += `
+        </div>
+        <div class="col-md-8">`;
+
+        if (param_type == 'bool') {
+            html_text += `
+            <select class="form-control mb-3" id="${seq}-${param}-input">
+                <option>False</option>
+                <option>True</option>
+            </select>`;
+        } else {
+            input_type = (param_type == 'int' || param_type == 'float') ? 'number' : 'text';
+            html_text += `<input type="${input_type}" value="${param_default_value}" class="form-control mb-3" id="${seq}-${param}-input" />`;
+        }
+
+        html_text += `
+        </div>
+        </div>`;
+    }
+
+    // html_text += `
+    //     </div>
+    // </div>`;
 
     return html_text;
 }
