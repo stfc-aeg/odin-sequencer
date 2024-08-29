@@ -26,7 +26,6 @@
     text-rendering: auto;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    content: "\f054";
     transform: rotate(90deg);
     transition: all linear 0.25s;
 }
@@ -40,4 +39,53 @@
     width: 48%;
     float:right;
     position: fixed;
+}
+
+.custom-row-border{
+    margin-right:0px;
+    margin-left: 0px;
+}
+
+.row{
+    margin-left: 0;
+    margin-right: 0;
+}
+
+.accordion-button{
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+}
+
+.btn-info{
+    line-height: 1rem;
+    font-size: 0.9rem;
+    padding-left: 0.2rem;
+    padding-right: 0.2rem;
+    padding-top: 0.3rem;
+    padding-bottom: 0.3rem;
+}
+
+.btn-success{
+    line-height: 1rem;
+    font-size: 0.9rem;
+    padding-left: 0.2rem;
+    padding-right: 0.2rem;
+    padding-top: 0.3rem;
+    padding-bottom: 0.3rem;
+}
+
+.card-new{
+    max-width: 170px;
+    min-width: 210px;
+}
+
+.col-card {
+    padding-top: 4px;
+    max-width: 220px;
+}
+
+.btn-width {
+    width: 66px;
 }

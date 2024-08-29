@@ -1,12 +1,12 @@
 requires = ['spi_commands']
-provides = ['test_sequence', 'another_sequence', 'no_params', 'test','abortable_sequence']
+provides = ['test_sequence', 'another_sequence', 'no_params', 'test','abortable_sequence_test']
 
 import time
 
 def test_sequence(a_val=123, b='hello'):
 
     print("Running test sequence")
-    print("a_val", a_val)
+    print("a_val ", a_val)
     spi_read(8) #part of spi_commands.py
     spi_write([0x34]) # part of spi_commands.py
     #load_dacs()
@@ -38,7 +38,7 @@ def another_sequence(c_val=False, d=1.234):
 
     pass
 
-def abortable_sequence(num_loops=100, loop_delay=0.1):
+def abortable_sequence_test(num_loops=100, loop_delay=0.1):
 
     set_progress(0, num_loops)
 
