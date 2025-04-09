@@ -270,11 +270,11 @@ function get_input_parameter_values(params) {
  */
 function parse_parameter_value(param_val, param_type) {
     if (param_type.startsWith('list')) {
-        const elementType = param_type.split("list-");
+        const element_type = param_type.split("list-");
         param_val = param_val.split(',');
 
         return param_val.map(function (element) {
-            return parse_parameter_value(element.trim(), elementType[1]);
+            return parse_parameter_value(element.trim(), element_type[1]);
         })
     }
 
