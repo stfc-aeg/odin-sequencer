@@ -270,7 +270,12 @@ function get_input_parameter_values(params) {
  */
 function parse_parameter_value(param_val, param_type) {
     if (param_type.startsWith('list')) {
-        param_type = 'list';
+        const element_type = param_type.split("list-");
+        param_val = param_val.split(',');
+
+        return param_val.map(function (element) {
+            return parse_parameter_value(element.trim(), element_type[1]);
+        })
     }
 
     switch (param_type) {
@@ -281,10 +286,7 @@ function parse_parameter_value(param_val, param_type) {
             param_val = parseFloat(param_val);
             break;
         case 'bool':
-            param_val = param_val == 'True';
-            break;
-        case 'list':
-            param_val = param_val.split(',');
+            param_val = param_val.toLowerCase() == 'true';
             break;
     }
 
