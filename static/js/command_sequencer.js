@@ -222,6 +222,7 @@ function execute_sequence(button) {
                 alert_message = `${param_name} - ${alert_message.substring(alert_message.lastIndexOf(':') + 2)}`;
             }
 
+            display_log_messages();
             display_alert(`#${seq_name}-alert`, alert_message);
         });
 
