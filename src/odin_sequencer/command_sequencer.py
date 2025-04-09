@@ -123,6 +123,7 @@ class CommandSequencer:
         try:
             self.param_tree.set(path, data)
         except ParameterTreeError as error:
+            self.log(error)
             raise CommandSequenceError(error)
 
     def set_detect_module_modifications(self, detect_module_modifications):
