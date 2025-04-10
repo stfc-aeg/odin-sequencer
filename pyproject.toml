@@ -44,6 +44,10 @@ dev = [
 process_queue = [
     "celery",
 ]
+test = [
+    "h5py",
+    "numpy",
+]
 
 [project.urls]
 GitHub = "https://github.com/stfc-aeg/odin-sequencer.git"
