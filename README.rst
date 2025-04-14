@@ -52,7 +52,7 @@ Run the odin server while in the odin-sequencer directory
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. code-block:: bash
 
-    $ odin_server --config config/odin_sequencer.cfg 
+    $ odin_control --config config/odin_sequencer.cfg 
 
 Access the UI by navigating to :code:`localhost:8888` in your browser
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
