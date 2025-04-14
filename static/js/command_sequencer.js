@@ -194,6 +194,7 @@ function execute_sequence(button) {
     if (!is_empty_object(params)) {
         
         data = get_input_parameter_values(params);
+        alert_id = ALERT_ID['sequencer_error'];
         
         sequencer_endpoint.put(data, `sequence_modules/${seq_module_name}/${seq_name}`)
         .then(() => {
@@ -209,7 +210,7 @@ function execute_sequence(button) {
                     alert_message = alert_message.substring(alert_message.lastIndexOf(':') + 2);
                 }
 
-                display_alert(`#${seq_name}-alert`, alert_message);
+                display_alert(alert_id, alert_message);
             });
 
             setTimeout(await_execution_complete, 250);
@@ -225,7 +226,7 @@ function execute_sequence(button) {
             }
 
             display_log_messages();
-            display_alert(`#${seq_name}-alert`, alert_message);
+            display_alert(alert_id, alert_message);
         });
 
     } else {
@@ -235,7 +236,7 @@ function execute_sequence(button) {
         sequencer_endpoint.put({ 'execute': seq_name })
         .catch(error => {
             alert_message = error.message;
-            display_alert(`#${seq_name}-alert`, alert_message);
+            display_alert(alert_id, alert_message);
         });
 
         setTimeout(await_execution_complete, 250);
@@ -401,7 +402,7 @@ function display_execution(sequence_name)
 }
 
 /*
- * This function hides the eexcution progress elements on the UI
+ * This function hides the excution progress elements on the UI
  */
 function hide_execution()
 {
