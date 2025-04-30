@@ -3,12 +3,14 @@ import Button from 'react-bootstrap/Button'
 import { useState, useRef } from 'react'
 import { Modal } from 'react-bootstrap'
 import ModalParams from './ModalParams'
-import { useAdapterEndpoint } from 'odin-react';
+import { AdapterEndpoint } from './AdapterEndpointWrapper';
+//import { useAdapterEndpoint } from 'odin-react';
 
 /* Constructs a card for each sequence within the module */
 
 const SequenceCard = ({ sequence, header, row_title }) => {
-  const sequencer_endpoint = useAdapterEndpoint("odin_sequencer", "http://127.0.0.1:8888");
+  //const sequencer_endpoint = useAdapterEndpoint("odin_sequencer", "http://127.0.0.1:8888");
+  const sequencer_endpoint = new AdapterEndpoint("odin_sequencer", "http://127.0.0.1:8888");
   const [showModal, setShowModal] = useState(false);
   const inputRefs = useRef(new Map());
   const readableHeader = String(header).replaceAll("_", " ")
@@ -57,7 +59,23 @@ const SequenceCard = ({ sequence, header, row_title }) => {
       const paramName = parts[parts.length - 2];
       message = `${paramName} - ${message.substring(message.lastIndexOf(':') + 2)}`;
     }
-    console.log("error", message);
+    const alert = {
+      alert_message: message,
+      alert_type: "danger"
+    };
+
+    handleAlerts(alert);
+  };
+
+  const handleAlerts = (alert) => {
+    const container = document.getElementById("alert-container");
+    if (container) {
+      container.innerHTML = `
+        <div class="alert alert-${alert.alert_type} mb-1" role="alert">
+          ${alert.alert_message}
+        </div>
+      `;
+    }
   };
 
   return (

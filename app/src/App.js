@@ -5,7 +5,6 @@ import MessageLog from './components/MessageLog'
 import { Col } from 'react-bootstrap';
 import './SequenceCard.css';
 
-import EndpointExamplePage from './components/EndpointExample';
 import { useAdapterEndpoint } from 'odin-react';
 
 /*
@@ -36,7 +35,7 @@ function BasicExample({ postPutMethod }) {
 
   return (
     <>
-      <div>Alert Box Here</div>
+      <div class="alert-box" id="alert-container"></div>
       <div class="flex-container">
         <div class="left">
           <Col sm={7}>
@@ -60,6 +59,5 @@ function BasicExample({ postPutMethod }) {
     </>
   );
 }
-// <EndpointExamplePage postPutMethod={postPutMethod} />
 
 export default BasicExample;
