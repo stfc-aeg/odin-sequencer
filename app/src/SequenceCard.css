@@ -1,0 +1,162 @@
+.execute-btn {
+    float: right;
+}
+
+.card-header {
+    color: #007bff;
+}
+
+.pre-scrollable {
+    background-color: #f7f7f7;
+    border: 1px solid black;
+    white-space: pre-wrap;
+    height: 700px
+}
+
+/* .row-padded {
+  padding: 30px;
+  background-color: #F7F7F7;
+  border: 1px solid #DDD;
+} */
+
+[data-bs-toggle="collapse"]:after {
+    display: inline-block;
+    font: normal normal 600 14px/1 "Font Awesome 5 Free";
+    font-size: inherit;
+    text-rendering: auto;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transform: rotate(90deg);
+    transition: all linear 0.25s;
+}
+
+[data-bs-toggle="collapse"].collapsed:after {
+    transform: rotate(0deg);
+}
+
+.sticky{
+    height: 100%;
+    width: 48%;
+    float:right;
+    position: fixed;
+}
+
+.custom-row-border{
+    margin-right:0px;
+    margin-left: 0px;
+}
+
+.row{
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+}
+
+.accordion-button{
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+}
+
+.accordion-body {
+    padding: 0px !important;
+}
+
+.accordion {
+    padding-left: 12px;
+}
+
+.btn-info, .btn-success{
+    line-height: 1rem !important;
+    font-size: 0.8rem !important;
+    height: 24px !important;
+    padding-left: 0.1rem !important;
+    padding-right: 0.1rem !important;
+    padding-top: 0.1rem !important;
+    padding-bottom: 0.1rem !important;
+}
+
+.btn-info {
+    float: left;
+}
+
+.card-new{
+    max-width: 170px;
+    min-width: 210px;
+}
+
+.col-card {
+    padding-top: 4px;
+    max-width: 220px;
+}
+
+.btn-width {
+    width: 58px;
+}
+
+.alert-bar {
+    padding-top: 18px;
+}
+
+.card-title {
+    font-size: 0.9rem !important;
+    text-align: center;
+}
+
+.card-body {
+    border-radius: 0px;
+    padding: 4px !important;
+    width: 184px;
+    height: 55px;
+}
+
+.card {
+    max-width: 184px;
+}
+
+.col {
+    max-width: 184px !important;
+    padding-left: 0px !important;
+    padding-right: 0px !important;
+}
+
+.flex-container {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.left {
+    width: 58%;
+    min-width: 400px;
+    padding-top: 12px;
+    padding-right: 12px;
+}
+
+.right {
+    width: 42%;
+    padding-left: 24px;
+    padding-right: 24px;
+}
+
+.col-sm-7 {
+    width: 100% !important;
+}
+
+@media (max-width: 768px) {
+    .left, .right {
+        width: 100%;
+    }
+}
+
+.button-row {
+    display: flex;
+    align-items: center;
+    width: 80%;
+    margin: 0 auto;
+}
+  
+.center-text {
+    margin: 0 auto;
+    text-align: center;
+    flex: 1;
+}
