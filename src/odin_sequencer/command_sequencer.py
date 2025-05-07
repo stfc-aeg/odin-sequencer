@@ -356,6 +356,7 @@ class CommandSequencer:
         """
         logs = []
         if last_message_timestamp:
+            self.last_message_timestamp = last_message_timestamp
             last_message_timestamp = datetime.strptime(last_message_timestamp,
                                                        "%Y-%m-%d %H:%M:%S.%f")
 

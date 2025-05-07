@@ -4,11 +4,14 @@ import { useState, useRef } from 'react'
 import { Modal } from 'react-bootstrap'
 import ModalParams from './ModalParams'
 import { AdapterEndpoint } from './AdapterEndpointWrapper';
+import { handleAlerts } from './alertUtils';
+import { useMessageLog, awaitExecutionComplete, awaitProcessExecutionComplete } from './useMessageLog';
 //import { useAdapterEndpoint } from 'odin-react';
 
 /* Constructs a card for each sequence within the module */
 
 const SequenceCard = ({ sequence, header, row_title }) => {
+  const { displayLogMessages } = useMessageLog();
   //const sequencer_endpoint = useAdapterEndpoint("odin_sequencer", "http://127.0.0.1:8888");
   const sequencer_endpoint = new AdapterEndpoint("odin_sequencer", "http://127.0.0.1:8888");
   const [showModal, setShowModal] = useState(false);
@@ -40,14 +43,27 @@ const SequenceCard = ({ sequence, header, row_title }) => {
     if (Object.keys(sequence).length !== 0) {
       const data = get_input_parameter_values(sequence);
       sequencer_endpoint.put(data, `sequence_modules/${row_title}/${header}`)
-        .then(() => {
-          sequencer_endpoint.put({ 'execute': header })
-            .catch(handleError);
-        })
-        .catch(handleError);
+      .then(() => {
+        sequencer_endpoint.put({ 'execute': header })
+          .catch((error) => {
+            handleError(error);
+          });
+          setTimeout(() => awaitExecutionComplete(displayLogMessages), 250);
+          setTimeout(() => awaitProcessExecutionComplete(displayLogMessages), 500);
+      })
+      .catch((error) => {
+        handleError(error);
+
+        setTimeout(() => {
+          displayLogMessages();
+        }, 100);
+      });
     } else {
       sequencer_endpoint.put({ 'execute': header }).catch(handleError);
+      setTimeout(() => awaitExecutionComplete(displayLogMessages), 250);
+      setTimeout(() => awaitProcessExecutionComplete(displayLogMessages), 500);
     }
+    
   };
 
   const handleError = (error) => {
@@ -65,17 +81,6 @@ const SequenceCard = ({ sequence, header, row_title }) => {
     };
 
     handleAlerts(alert);
-  };
-
-  const handleAlerts = (alert) => {
-    const container = document.getElementById("alert-container");
-    if (container) {
-      container.innerHTML = `
-        <div class="alert alert-${alert.alert_type} mb-1" role="alert">
-          ${alert.alert_message}
-        </div>
-      `;
-    }
   };
 
   return (
@@ -111,48 +116,6 @@ const SequenceCard = ({ sequence, header, row_title }) => {
 };
 
 export default SequenceCard;
-
-
-/* 
-function execute(params, seq_name, sequencer_endpoint, row_title) {
-  if (Object.keys(params).length !== 0) {
-    let data = get_input_parameter_values(params);
-
-    sequencer_endpoint.put(data, `sequence_modules/${row_title}/${seq_name}`)
-    .then(() => {
-      console.log("sequencer", sequencer_endpoint);
-
-      sequencer_endpoint.put({ 'execute': seq_name })
-      .catch(error => {
-        let alert_message = error.message;
-        if (alert_message.startsWith('Invalid list')) {
-          alert_message = alert_message.substring(alert_message.lastIndexOf(':') + 2);
-        }
-
-        console.log("first alert", alert_message)
-      });
-    })
-    .catch(error => {
-      let alert_message = error.message;
-      if (alert_message.startsWith('Type mismatch updating')) {
-        let last_slash = alert_message.lastIndexOf('/');
-        let second_to_last_slash = alert_message.lastIndexOf('/', last_slash - 1);
-        let param_name = alert_message.substring(second_to_last_slash + 1, last_slash);
-        alert_message = `${param_name} - ${alert_message.substring(alert_message.lastIndexOf(':') + 2)}`;
-      }
-
-      console.log("second alert", alert_message)
-    });
-
-  } else {
-    sequencer_endpoint.put({ 'execute': seq_name })
-    .catch(error => {
-      let alert_message = error.message;
-      console.log("third alert", alert_message)
-    });
-  }
-}
- */
 
 
 function get_input_parameter_values(params, seq) {
