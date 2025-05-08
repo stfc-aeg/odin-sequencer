@@ -25,7 +25,7 @@ export const useMessageLog = () => {
                 for (const [timestampRaw, message] of log_messages) {
                     let timestamp = timestampRaw.slice(0, -3);
                     pre_scrollable.innerHTML += 
-                    `<span style="color:#007bff">${timestamp}</span> ${message}<br>`;
+                    `<span style="color:#007bff; font-size:12px">${timestamp}</span> <span style="font-size:12px">${message}</span><br>`;
                     lastTimestamp = timestampRaw;
                 }
 

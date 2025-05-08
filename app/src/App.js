@@ -46,14 +46,6 @@ function BasicExample({ postPutMethod }) {
         </div>
         <div class="right">
           <MessageLog></MessageLog>
-          <div class="button-row">
-            <button>Abort</button>
-            <div class="center-text form-switch">
-              <input class="form-check-input" type="checkbox" id="detect-module-changes-toggle"></input>
-              <label class="form-check-label" for="detect-module-changes-toggle"><b>Detect&nbsp;Changes</b></label>
-            </div>
-            <button>Reload</button>
-          </div>
         </div>
       </div>
     </>
