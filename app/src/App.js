@@ -5,6 +5,7 @@ import MessageLog from './components/MessageLog'
 import { Col } from 'react-bootstrap';
 import './SequenceCard.css';
 
+import { AdapterEndpoint } from './components/AdapterEndpointWrapper';
 import { useAdapterEndpoint } from 'odin-react';
 
 /*
@@ -19,11 +20,11 @@ const ENDPOINT_URL = "http://127.0.0.1:8888";
 function BasicExample({ postPutMethod }) {
   const [sequenceModules, setSequenceModules] = useState({});
   const [error, setError] = useState({});
-  const sequencer_endpoint = useAdapterEndpoint("odin_sequencer", ENDPOINT_URL);
+  //const sequencer_endpoint = useAdapterEndpoint("odin_sequencer", ENDPOINT_URL);
+  const sequencer_endpoint = new AdapterEndpoint("odin_sequencer", ENDPOINT_URL);
 
-  useEffect(() => {
-
-    sequencer_endpoint.get('')
+  const fetchModules = () => {
+    return sequencer_endpoint.get('')
       .then(result => {
         setSequenceModules(result.sequence_modules);
       })
@@ -31,6 +32,10 @@ function BasicExample({ postPutMethod }) {
         console.error("Error fetching endpoint data:", err);
         setError(err.message);
       });
+  };
+
+  useEffect(() => {
+    fetchModules();
   }, []);
 
   return (
@@ -45,7 +50,7 @@ function BasicExample({ postPutMethod }) {
           </Col>
         </div>
         <div class="right">
-          <MessageLog></MessageLog>
+          <MessageLog reloadModules={fetchModules}></MessageLog>
         </div>
       </div>
     </>

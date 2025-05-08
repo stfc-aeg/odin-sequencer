@@ -11,7 +11,7 @@ const execution_status_progress = document.getElementById("execution-status-prog
 
 const sequencer_endpoint = new AdapterEndpoint("odin_sequencer", "http://127.0.0.1:8888");
 
-const MessageLog = () => {
+const MessageLog = ({ reloadModules }) => {
     const { displayLogMessages } = useMessageLog();
     const hasLoaded = useRef(false);
 
@@ -23,9 +23,62 @@ const MessageLog = () => {
         }
     }, []);
 
-    const handleOpenModal = () => {
-
+    /**
+     * This function calls the reloading mechanism implemented on the backend which decides
+     * which modules need to be reloaded. It disables the execute and reload buttons before
+     * making a call to the backend and enables them when the process completes or fails.
+     * It also calls the build_sequence_modules_layout to rebuild the layout and displays
+     * the relevant messages in the alerts depending on the process outcome.
+     */
+    const handleReloadClick = () => {
+        //disable_buttons(`${BUTTON_ID['all_execute']},${BUTTON_ID['reload']}`, true); TODO
+    
+        let alert_message = '';
+        let alert_type = '';
+        sequencer_endpoint.put({ 'reload': true })
+        .then(() => {
+            alert_type = "primary";
+            alert_message = 'The sequence modules were successfully reloaded';
+            return reloadModules();
+        })
+        .catch(error => {
+            alert_type = "danger";
+            alert_message = error.message
+            if (!alert_message.startsWith('Cannot start the reloading')) {
+                alert_message += '.<br><br>To load the missing sequences, first resolve the errors and then click the Reload button.';
+            }
+        })
+        .then(() => {
+            const alert = {
+                alert_message: alert_message,
+                alert_type: alert_type
+            };
+            handleAlerts(alert);
+            //disable_buttons(`${BUTTON_ID['all_execute']},${BUTTON_ID['reload']}`, false); TODO
+        });
     };
+
+    const abortSequence = () => {
+        let alert_message = "";
+        let alert_type = "";
+    
+        sequencer_endpoint.put({ 'abort': true })
+        .then(() => {
+            alert_message = "Abort sent to currently executing sequence";
+            alert_type = "primary";
+        })
+        .catch(error => {
+            alert_message = error.message;
+            alert_type = "danger";
+        })
+        .then(() => {
+            const alert = {
+                alert_message: alert_message,
+                alert_type: alert_type
+            };
+            handleAlerts(alert);
+        });
+    }
 
     return (
         <>
@@ -34,12 +87,12 @@ const MessageLog = () => {
 
 
             <div class="button-row">
-                <button onClick={handleOpenModal}>Abort</button>
+                <button onClick={abortSequence}>Abort</button>
                 <div class="center-text form-switch">
                     <input class="form-check-input" type="checkbox" id="detect-module-changes-toggle"></input>
                     <label class="form-check-label" for="detect-module-changes-toggle"><b>Detect&nbsp;Changes</b></label>
                 </div>
-                <button onClick={handleOpenModal}>Reload</button>
+                <button onClick={handleReloadClick}>Reload</button>
             </div>
 
             <div className="row">
@@ -162,56 +215,3 @@ export default MessageLog
 // function set_detect_module_changes_toggle(detect_module_modifications) {
 //     detect_changes_switch.checked = detect_module_modifications;
 // }
-
-// /**
-//  * This function calls the reloading mechanism implemented on the backend which decides
-//  * which modules need to be reloaded. It disables the execute and reload buttons before
-//  * making a call to the backend and enables them when the process completes or fails.
-//  * It also calls the build_sequence_modules_layout to rebuild the layout and displays
-//  * the relevant messages in the alerts depending on the process outcome.
-//  */
-// function reload_modules() {
-//     hide_alerts(`${ALERT_ID['sequencer_info']},${ALERT_ID['sequencer_error']}`);
-//     disable_buttons(`${BUTTON_ID['all_execute']},${BUTTON_ID['reload']}`, true);
-
-//     alert_id = '';
-//     alert_message = '';
-//     sequencer_endpoint.put({ 'reload': true })
-//     .then(() => {
-//         alert_id = ALERT_ID['sequencer_info'];
-//         alert_message = 'The sequence modules were successfully reloaded';
-//     })
-//     .catch(error => {
-//         alert_id = ALERT_ID['sequencer_error'];
-//         alert_message = error.message
-//         if (!alert_message.startsWith('Cannot start the reloading')) {
-//             alert_message += '.<br><br>To load the missing sequences, first resolve the errors and then click the Reload button.';
-//         }
-//     })
-//     .then(() => {
-//         display_alert(alert_id, alert_message);
-//         build_sequence_modules_layout();
-//         disable_buttons(`${BUTTON_ID['all_execute']},${BUTTON_ID['reload']}`, false);
-//     });
-// }
-
-function abort_sequence() {
-    //hide_alerts(`${ALERT_ID['sequencer_info']},${ALERT_ID['sequencer_error']}`);
-
-    sequencer_endpoint.put({ 'abort': true })
-    .then(() => {
-        const alert = {
-            alert_message: "Abort sent to currently executing sequence",
-            alert_type: "primary"
-        };
-    })
-    .catch(error => {
-        const alert = {
-            alert_message: error.message,
-            alert_type: "danger"
-        };
-    })
-    .then(() => {
-        handleAlerts(alert);
-    });
-}
