@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useMessageLog } from './useMessageLog';
 import { AdapterEndpoint } from './AdapterEndpointWrapper';
 import { handleAlerts } from './alertUtils';
@@ -14,14 +14,65 @@ const sequencer_endpoint = new AdapterEndpoint("odin_sequencer", "http://127.0.0
 const MessageLog = ({ reloadModules }) => {
     const { displayLogMessages } = useMessageLog();
     const hasLoaded = useRef(false);
+    const [detectChanges, setDetectChanges] = useState(false);
+    const pollingRef = useRef(false);
 
     useEffect(() => {
         if (!hasLoaded.current) {
-            sequencer_endpoint.put({ 'last_message_timestamp': "" })
+            sequencer_endpoint.put({ 'last_message_timestamp': "" });
             hasLoaded.current = true;
             displayLogMessages();
+    
+            // Check if detect_module_modifications is already enabled
+            sequencer_endpoint.get('detect_module_modifications')
+                .then(result => {
+                    if (result.detect_module_modifications) {
+                        setDetectChanges(true);
+                        pollingRef.current = true;
+                        awaitModuleChanges();
+                    }
+                })
+                .catch(error => {
+                    handleAlerts({ alert_message: error.message, alert_type: 'danger' });
+                });
         }
     }, []);
+
+    const awaitModuleChanges = () => {
+        if (!pollingRef.current) return;
+    
+        sequencer_endpoint.get('module_modifications_detected')
+            .then(result => {
+                if (result.module_modifications_detected) {
+                    const info_message = 'Code changes were detected, click the Reload button to load them';
+                    handleAlerts({ alert_message: info_message, alert_type: 'info' });
+                }
+            })
+            .catch(error => {
+                handleAlerts({ alert_message: error.message, alert_type: 'danger' });
+            })
+            .finally(() => {
+                if (pollingRef.current) {
+                    setTimeout(awaitModuleChanges, 1000);
+                }
+            });
+    };
+
+    const toggleDetectChanges = (enabled) => {
+        sequencer_endpoint.put({ 'detect_module_modifications': enabled })
+            .then(() => {
+                setDetectChanges(enabled);
+                pollingRef.current = enabled;
+                if (enabled) {
+                    awaitModuleChanges();
+                }
+            })
+            .catch(error => {
+                handleAlerts({ alert_message: error.message, alert_type: 'danger' });
+                setDetectChanges(false);
+                pollingRef.current = false;
+            });
+    };
 
     /**
      * This function calls the reloading mechanism implemented on the backend which decides
@@ -87,12 +138,18 @@ const MessageLog = ({ reloadModules }) => {
 
 
             <div class="button-row">
-                <button onClick={abortSequence}>Abort</button>
-                <div class="center-text form-switch">
-                    <input class="form-check-input" type="checkbox" id="detect-module-changes-toggle"></input>
-                    <label class="form-check-label" for="detect-module-changes-toggle"><b>Detect&nbsp;Changes</b></label>
+                <button class="btn btn-primary" onClick={abortSequence}>Abort</button>
+                <div className="center-text form-switch">
+                    <input
+                        className="form-check-input"
+                        type="checkbox"
+                        id="detect-module-changes-toggle"
+                        checked={detectChanges}
+                        onChange={e => toggleDetectChanges(e.target.checked)}
+                    />
+                    <label className="form-check-label" htmlFor="detect-module-changes-toggle"><b style={{ marginLeft: '8px' }}>Detect&nbsp;Changes</b></label>
                 </div>
-                <button onClick={handleReloadClick}>Reload</button>
+                <button className="btn btn-primary" onClick={handleReloadClick}>Reload</button>
             </div>
 
             <div className="row">
@@ -186,32 +243,4 @@ export default MessageLog
 //             execution_status_progress.innerHTML = "";
 //         }
 //     });
-// }
-
-// /**
-//  * This function listens for module changes by calling itself every second. It displays
-//  * an alert message when it detects that the backend has reported of module changes. 
-//  */
-// function await_module_changes() {
-//     sequencer_endpoint.get('module_modifications_detected')
-//     .then(result => {
-//         if (result.module_modifications_detected) {
-//             info_message = 'Code changes were detected, click the Reload button to load them';
-//             display_alert(ALERT_ID['sequencer_info'], info_message);
-//         }
-
-//         if (detect_module_modifications) {
-//             setTimeout(await_module_changes, 1000);
-//         }
-//     })
-//     .catch(error => {
-//         display_alert(ALERT_ID['sequencer_error'], error.message);
-//     });
-// }
-
-// /**
-//  * This function enables or disables the Detect Changes toggle.
-//  */
-// function set_detect_module_changes_toggle(detect_module_modifications) {
-//     detect_changes_switch.checked = detect_module_modifications;
 // }
