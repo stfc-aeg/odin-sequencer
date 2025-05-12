@@ -2,16 +2,11 @@ import { useState, useEffect, useRef } from 'react';
 import { useMessageLog } from './useMessageLog';
 import { AdapterEndpoint } from './AdapterEndpointWrapper';
 import { handleAlerts } from './alertUtils';
-
-const execution_spinner = document.getElementById("execution-status-spinner");
-const execution_text = document.getElementById("execution-status-text");
-const execution_progress = document.getElementById("execution-progress");
-const execution_progress_bar = document.getElementById("execution-progress-bar");
-const execution_status_progress = document.getElementById("execution-status-progress");
+import { awaitExecutionComplete, awaitProcessExecutionComplete } from './useMessageLog';
 
 const sequencer_endpoint = new AdapterEndpoint("odin_sequencer", "http://127.0.0.1:8888");
 
-const MessageLog = ({ reloadModules }) => {
+const MessageLog = ({ reloadModules, executionPanelRef }) => {
     const { displayLogMessages } = useMessageLog();
     const hasLoaded = useRef(false);
     const [detectChanges, setDetectChanges] = useState(false);
@@ -35,6 +30,24 @@ const MessageLog = ({ reloadModules }) => {
                 .catch(error => {
                     handleAlerts({ alert_message: error.message, alert_type: 'danger' });
                 });
+            
+            sequencer_endpoint.get('')
+            .then(result => {
+                const is_executing = result.is_executing;
+
+                if (is_executing) {
+                    executionPanelRef.current?.displayExecution(result.execute);
+                    awaitExecutionComplete(displayLogMessages, executionPanelRef);
+                    awaitProcessExecutionComplete(displayLogMessages);
+                }
+                else
+                {
+                    executionPanelRef.current?.hideExecution();
+                }
+            })
+            .catch(error => {
+                handleAlerts({ alert_message: error.message, alert_type: 'danger' });
+            });
         }
     }, []);
 
@@ -151,96 +164,8 @@ const MessageLog = ({ reloadModules }) => {
                 </div>
                 <button className="btn btn-primary" onClick={handleReloadClick}>Reload</button>
             </div>
-
-            <div className="row">
-                <div className="col-md-12">
-                    <div
-                        className="spinner-border spinner-border-sm text-primary d-none"
-                        role="status"
-                        id="execution-status-spinner"
-                    >
-                        <span className="visually-hidden">Executing...</span>
-                    </div>
-                    <span id="execution-status-text" style={{ textAlign: 'left' }}></span>
-                    <span id="execution-status-progress" style={{ textAlign: 'left' }}></span>
-                </div>
-            </div>
-
-            <div className="row">
-                <div className="col-md-12">
-                    <div
-                        className="progress d-none"
-                        id="execution-progress"
-                        style={{ height: '12px' }}
-                    >
-                        <div
-                            className="progress-bar progress-bar-striped progress-bar-animated"
-                            id="execution-progress-bar"
-                            role="progressbar"
-                            style={{ width: '0%' }}
-                            aria-valuenow="0"
-                            aria-valuemin="0"
-                            aria-valuemax="100"
-                        ></div>
-                    </div>
-                </div>
-            </div>
         </>
     );
 };
 
 export default MessageLog
-
-
-
-
-
-// /*
-//  * This function displays the excution progress elements on the UI
-//  */
-// function display_execution(sequence_name)
-// {
-//     execution_spinner.classList.remove('d-none');
-//     execution_text.innerHTML = "<b>Executing:&nbsp;" + sequence_name + "</b>";
-//     execution_progress_bar.style.width = "0%";
-//     execution_progress_bar.setAttribute('aria-valuenow', 0);
-//     execution_status_progress.innerHTML = ""
-
-//     execution_progress.classList.remove('d-none');
-// }
-
-// /*
-//  * This function hides the excution progress elements on the UI
-//  */
-// function hide_execution()
-// {
-//     execution_progress.classList.add('d-none');
-//     execution_spinner.classList.add('d-none');
-//     execution_text.innerHTML = "";
-//     execution_status_progress.innerHTML = "";
-// }
-
-// /*
-//  * This function updates the execution progress bar
-//  */
-
-// function update_execution_progress()
-// {
-//     sequencer_endpoint.get('execution_progress')
-//     .then(result => {
-//         var current = result.execution_progress.current;
-//         var total = result.execution_progress.total;
-//         if (total != -1)
-//         {
-//             var percent_complete = Math.floor((100.0 * current) / total);
-//             execution_progress_bar.style.width = percent_complete + "%";
-//             execution_progress_bar.setAttribute('aria-valuenow', percent_complete);
-//             execution_status_progress.innerHTML = "<b>(" + current + "/" + total + ")</b>";
-//         }
-//         else
-//         {
-//             execution_progress_bar.style.width = "100%";
-//             execution_status_progress.innerHTML = "";
-//         }
-//     });
-// }

@@ -20,13 +20,13 @@ export const useMessageLog = () => {
             if (Object.keys(log_messages).length !== 0) {
 
                 const pre_scrollable = document.querySelector('#log-messages');
-                let lastTimestamp = lastMessageTimestampRef;
+                //let lastTimestamp = lastMessageTimestampRef;
 
                 for (const [timestampRaw, message] of log_messages) {
                     let timestamp = timestampRaw.slice(0, -3);
                     pre_scrollable.innerHTML += 
                     `<span style="color:#007bff; font-size:12px">${timestamp}</span> <span style="font-size:12px">${message}</span><br>`;
-                    lastTimestamp = timestampRaw;
+                    //lastTimestamp = timestampRaw;
                 }
 
                 // update ref to latest timestamp from the last message
@@ -43,18 +43,16 @@ export const useMessageLog = () => {
     return { displayLogMessages };
 };
 
-export const awaitExecutionComplete = (displayLogMessages) => {
+export const awaitExecutionComplete = (displayLogMessages, executionPanelRef) => {
     sequencer_endpoint.get('is_executing')
     .then(result => {
         displayLogMessages();
         const is_executing = result.is_executing
         if (is_executing) {
-            //update_execution_progress();
-            setTimeout(() => awaitExecutionComplete(displayLogMessages), 500);
+            executionPanelRef.current?.updateExecutionProgress?.();
+            setTimeout(() => awaitExecutionComplete(displayLogMessages, executionPanelRef), 500);
         } else {
-            //disable_buttons(`${BUTTON_ID['all_execute']},${BUTTON_ID['reload']}`, false);
-            //disable_buttons(`${BUTTON_ID['abort']}`, true);
-            //hide_execution();
+            executionPanelRef.current?.hideExecution?.();
         }
     });
 }
@@ -64,7 +62,7 @@ export const awaitProcessExecutionComplete = (displayLogMessages) => {
     .then(result => {
         displayLogMessages();
         const process_tasks = result.process_tasks
-        if (process_tasks.length != 0) {
+        if (process_tasks.length !== 0) {
             setTimeout(() => awaitProcessExecutionComplete(displayLogMessages), 500);
         }
     });

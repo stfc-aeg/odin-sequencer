@@ -1,6 +1,6 @@
 import Card from 'react-bootstrap/Card'
 import Button from 'react-bootstrap/Button'
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Modal } from 'react-bootstrap'
 import ModalParams from './ModalParams'
 import { AdapterEndpoint } from './AdapterEndpointWrapper';
@@ -10,8 +10,9 @@ import { useMessageLog, awaitExecutionComplete, awaitProcessExecutionComplete } 
 
 /* Constructs a card for each sequence within the module */
 
-const SequenceCard = ({ sequence, header, row_title }) => {
+const SequenceCard = ({ sequence, header, row_title, executionPanelRef }) => {
   const { displayLogMessages } = useMessageLog();
+  const [executionStarted, setExecutionStarted] = useState(false);
   //const sequencer_endpoint = useAdapterEndpoint("odin_sequencer", "http://127.0.0.1:8888");
   const sequencer_endpoint = new AdapterEndpoint("odin_sequencer", "http://127.0.0.1:8888");
   const [showModal, setShowModal] = useState(false);
@@ -44,11 +45,12 @@ const SequenceCard = ({ sequence, header, row_title }) => {
       const data = get_input_parameter_values(sequence);
       sequencer_endpoint.put(data, `sequence_modules/${row_title}/${header}`)
       .then(() => {
+        setExecutionStarted(true);
         sequencer_endpoint.put({ 'execute': header })
           .catch((error) => {
             handleError(error);
           });
-          setTimeout(() => awaitExecutionComplete(displayLogMessages), 250);
+          setTimeout(() => awaitExecutionComplete(displayLogMessages, executionPanelRef), 250);
           setTimeout(() => awaitProcessExecutionComplete(displayLogMessages), 500);
       })
       .catch((error) => {
@@ -59,12 +61,19 @@ const SequenceCard = ({ sequence, header, row_title }) => {
         }, 100);
       });
     } else {
+      setExecutionStarted(true);
       sequencer_endpoint.put({ 'execute': header }).catch(handleError);
-      setTimeout(() => awaitExecutionComplete(displayLogMessages), 250);
+      setTimeout(() => awaitExecutionComplete(displayLogMessages, executionPanelRef), 250);
       setTimeout(() => awaitProcessExecutionComplete(displayLogMessages), 500);
     }
-    
   };
+
+  // useEffect to run displayExecution when execution starts
+  useEffect(() => {
+    if (executionStarted && executionPanelRef.current) {
+      executionPanelRef.current?.displayExecution?.(header);
+    }
+  }, [executionStarted]); // Runs when executionStarted changes
 
   const handleError = (error) => {
     let message = error.message;
@@ -124,7 +133,7 @@ function get_input_parameter_values(params, seq) {
     let param_val = String(params[param].value);
     let param_type = params[param].type;
 
-    if (param_type != 'str') {
+    if (param_type !== 'str') {
         param_val = parse_parameter_value(param_val, param_type);
     }
 
@@ -152,7 +161,7 @@ function parse_parameter_value(param_val, param_type) {
           param_val = parseFloat(param_val);
           break;
       case 'bool':
-          param_val = param_val.toLowerCase() == 'true';
+          param_val = param_val.toLowerCase() === 'true';
           break;
   }
 
