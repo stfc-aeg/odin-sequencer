@@ -10,7 +10,7 @@ import { useMessageLog, awaitExecutionComplete, awaitProcessExecutionComplete } 
 
 /* Constructs a card for each sequence within the module */
 
-const SequenceCard = ({ sequence, header, row_title, executionPanelRef }) => {
+const SequenceCard = ({ sequence, header, row_title, executionPanelRef, setAbortDisabled }) => {
   const { displayLogMessages } = useMessageLog();
   const [executionStarted, setExecutionStarted] = useState(false);
   //const sequencer_endpoint = useAdapterEndpoint("odin_sequencer", "http://127.0.0.1:8888");
@@ -22,6 +22,10 @@ const SequenceCard = ({ sequence, header, row_title, executionPanelRef }) => {
   const handleOpenModal = () => setShowModal(true);
   const handleCloseModal = () => setShowModal(false);
   //const handleExecute = () => execute(sequence, header, sequencer_endpoint, row_title);
+
+  const setAbort = (checked) => {
+        setAbortDisabled(checked);
+    };
 
   const handleSave = () => {
     const updatedValues = {};
@@ -45,12 +49,14 @@ const SequenceCard = ({ sequence, header, row_title, executionPanelRef }) => {
       const data = get_input_parameter_values(sequence);
       sequencer_endpoint.put(data, `sequence_modules/${row_title}/${header}`)
       .then(() => {
+        // disable button toggle logic for abort TODO (false)
+        setAbort(false);
         setExecutionStarted(true);
         sequencer_endpoint.put({ 'execute': header })
           .catch((error) => {
             handleError(error);
           });
-          setTimeout(() => awaitExecutionComplete(displayLogMessages, executionPanelRef), 250);
+          setTimeout(() => awaitExecutionComplete(displayLogMessages, executionPanelRef, setAbortDisabled), 250);
           setTimeout(() => awaitProcessExecutionComplete(displayLogMessages), 500);
       })
       .catch((error) => {
@@ -61,9 +67,11 @@ const SequenceCard = ({ sequence, header, row_title, executionPanelRef }) => {
         }, 100);
       });
     } else {
+      // disable button toggle logic for abort TODO (false)
+      setAbort(false);
       setExecutionStarted(true);
       sequencer_endpoint.put({ 'execute': header }).catch(handleError);
-      setTimeout(() => awaitExecutionComplete(displayLogMessages, executionPanelRef), 250);
+      setTimeout(() => awaitExecutionComplete(displayLogMessages, executionPanelRef, setAbortDisabled), 250);
       setTimeout(() => awaitProcessExecutionComplete(displayLogMessages), 500);
     }
   };

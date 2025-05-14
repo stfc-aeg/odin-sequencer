@@ -1,13 +1,15 @@
 import Accordion from 'react-bootstrap/Accordion';
 import { useRef, useEffect, useState } from 'react';
 import ModuleList from './components/ModuleList'
-import MessageLog from './components/MessageLog'
+import SequenceButtons from './components/SequenceButtons'
 import { Col } from 'react-bootstrap';
-import './SequenceCard.css';
+//import './SequenceCard.css';
+import './App.css';
 import ExecutionPanel from './components/ExecutionPanel';
 
 import { AdapterEndpoint } from './components/AdapterEndpointWrapper';
 import { useAdapterEndpoint } from 'odin-react';
+import MessageLog from './components/MessageLog';
 
 /*
   This is the main application for the React interface.
@@ -21,6 +23,7 @@ const ENDPOINT_URL = "http://127.0.0.1:8888";
 function BasicExample({ postPutMethod }) {
   const [sequenceModules, setSequenceModules] = useState({});
   const [error, setError] = useState({});
+  const [abortDisabled, setAbortDisabled] = useState(true);
 
   const executionPanelRef = useRef(null);
   //const sequencer_endpoint = useAdapterEndpoint("odin_sequencer", ENDPOINT_URL);
@@ -46,15 +49,16 @@ function BasicExample({ postPutMethod }) {
       <div class="alert-box" id="alert-container"></div>
       <div class="flex-container">
         <div class="left">
+          <SequenceButtons reloadModules={fetchModules} executionPanelRef={executionPanelRef} abortDisabled={abortDisabled} setAbortDisabled={setAbortDisabled}></SequenceButtons>
+          <ExecutionPanel ref={executionPanelRef}></ExecutionPanel>
           <Col sm={7}>
             <Accordion>
-              <ModuleList sequence_modules={sequenceModules} executionPanelRef={executionPanelRef}></ModuleList>
+              <ModuleList sequence_modules={sequenceModules} executionPanelRef={executionPanelRef} setAbortDisabled={setAbortDisabled}></ModuleList>
             </Accordion>
           </Col>
         </div>
         <div class="right">
-          <MessageLog reloadModules={fetchModules} executionPanelRef={executionPanelRef}></MessageLog>
-          <ExecutionPanel ref={executionPanelRef}></ExecutionPanel>
+          <MessageLog></MessageLog>
         </div>
       </div>
     </>

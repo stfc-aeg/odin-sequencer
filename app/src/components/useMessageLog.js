@@ -43,15 +43,17 @@ export const useMessageLog = () => {
     return { displayLogMessages };
 };
 
-export const awaitExecutionComplete = (displayLogMessages, executionPanelRef) => {
+export const awaitExecutionComplete = (displayLogMessages, executionPanelRef, setAbortDisabled) => {
     sequencer_endpoint.get('is_executing')
     .then(result => {
         displayLogMessages();
         const is_executing = result.is_executing
         if (is_executing) {
             executionPanelRef.current?.updateExecutionProgress?.();
-            setTimeout(() => awaitExecutionComplete(displayLogMessages, executionPanelRef), 500);
+            setTimeout(() => awaitExecutionComplete(displayLogMessages, executionPanelRef, setAbortDisabled), 500);
         } else {
+            // disable button toggle logic for abort TODO (true)
+            setAbortDisabled(true);
             executionPanelRef.current?.hideExecution?.();
         }
     });
