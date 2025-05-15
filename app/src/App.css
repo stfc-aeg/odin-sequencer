@@ -190,12 +190,6 @@
     gap: 50px;
     margin: 0 auto;
 }
-  
-.center-text {
-    margin: 0 auto;
-    text-align: center;
-    flex: 1;
-}
 
 .alert-box {
     position: sticky;

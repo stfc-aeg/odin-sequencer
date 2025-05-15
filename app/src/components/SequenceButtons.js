@@ -133,7 +133,7 @@ const SequenceButtons = ({ reloadModules, executionPanelRef, setAbortDisabled })
     return (
         <>
             <div className="button-row">
-                <div className="form-switch">
+                <div className="form-switch d-flex align-items-center mb-0">
                     <input
                         className="form-check-input"
                         type="checkbox"
