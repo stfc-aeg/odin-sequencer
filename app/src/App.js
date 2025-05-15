@@ -50,9 +50,8 @@ function BasicExample({ postPutMethod }) {
       <ExecutionPanel ref={executionPanelRef} abortDisabled={abortDisabled} setAbortDisabled={setAbortDisabled}></ExecutionPanel>
       <div class="flex-container">
         <div class="left">
-          <SequenceButtons reloadModules={fetchModules} executionPanelRef={executionPanelRef} setAbortDisabled={setAbortDisabled}></SequenceButtons>
           <div className="ui-card">
-            <div className="ui-card-header">Sequences</div>
+            <div className="ui-card-header d-flex align-items-center">Sequences <SequenceButtons reloadModules={fetchModules} executionPanelRef={executionPanelRef} setAbortDisabled={setAbortDisabled}></SequenceButtons></div>
             <div className="ui-card-body message-box">
               <Col sm={7}>
                 <Accordion>
