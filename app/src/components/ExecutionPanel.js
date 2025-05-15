@@ -1,9 +1,10 @@
 import { useRef, useImperativeHandle, forwardRef } from 'react';
 import { AdapterEndpoint } from './AdapterEndpointWrapper';
+import { handleAlerts } from './alertUtils';
 
 const sequencer_endpoint = new AdapterEndpoint("odin_sequencer", "http://127.0.0.1:8888");
 
-const ExecutionPanel = forwardRef((props, ref) => {
+const ExecutionPanel = forwardRef(({ abortDisabled, setAbortDisabled }, ref) => {
     const spinnerRef = useRef(null);
     const textRef = useRef(null);
     const progressRef = useRef(null);
@@ -52,31 +53,60 @@ const ExecutionPanel = forwardRef((props, ref) => {
             })
         }
     }));
+   
+    const abortSequence = () => {
+        let alert_message = "";
+        let alert_type = "";
+    
+        sequencer_endpoint.put({ 'abort': true })
+        .then(() => {
+            alert_message = "Abort sent to currently executing sequence";
+            alert_type = "primary";
+        })
+        .catch(error => {
+            alert_message = error.message;
+            alert_type = "danger";
+        })
+        .then(() => {
+            const alert = {
+                alert_message: alert_message,
+                alert_type: alert_type
+            };
+            handleAlerts(alert);
+        });
+    }
 
     return (
         <>
-            <div className="row">
-                <div className="col-md-12">
-                    <div className="spinner-border spinner-border-sm text-primary d-none" ref={spinnerRef} style={{ marginRight: '10px' }}>
-                        <span className="visually-hidden">Executing...</span>
+            <div className='progress-container'>
+                <div className="row" style={{ marginBottom: '8px' }} >
+                    <div className="d-flex flex-wrap align-items-center justify-content-between mb-2 w-100">
+                        <div style={{ marginRight: '10px' }}>
+                            <span ref={textRef} style={{ textAlign: 'left' }}></span>
+                            <div>
+                                <span ref={progressStatusRef} style={{ textAlign: 'left' }}></span>
+                                <div className="spinner-border spinner-border-sm text-primary d-none" ref={spinnerRef} style={{ marginLeft: '10px' }}>
+                                    <span className="visually-hidden">Executing...</span>
+                                </div>
+                            </div>
+                        </div>
+                        {!abortDisabled && (
+                            <button class="btn btn-primary" onClick={abortSequence}>Abort</button>
+                        )}
                     </div>
-                    <span ref={textRef} style={{ textAlign: 'left' }}></span>
-                    <span ref={progressStatusRef} style={{ textAlign: 'left' }}></span>
-                </div>
-            </div>
 
-            <div className="row" style={{ marginBottom: '8px' }} >
-                <div className="col-md-12">
-                    <div className="progress d-none" ref={progressRef} style={{ height: '12px' }}>
-                        <div
-                            className="progress-bar progress-bar-striped progress-bar-animated"
-                            ref={progressBarRef}
-                            role="progressbar"
-                            style={{ width: '0%' }}
-                            aria-valuenow="0"
-                            aria-valuemin="0"
-                            aria-valuemax="100"
-                        ></div>
+                    <div className="col-md-12">
+                        <div className="progress d-none" ref={progressRef} style={{ height: '12px' }}>
+                            <div
+                                className="progress-bar progress-bar-striped progress-bar-animated"
+                                ref={progressBarRef}
+                                role="progressbar"
+                                style={{ width: '0%' }}
+                                aria-valuenow="0"
+                                aria-valuemin="0"
+                                aria-valuemax="100"
+                            ></div>
+                        </div>
                     </div>
                 </div>
             </div>

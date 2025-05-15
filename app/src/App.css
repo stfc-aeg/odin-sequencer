@@ -202,9 +202,19 @@
 }
 
 .alert-box {
+    position: sticky;
+    z-index: 1040;
     padding-top: 18px;
     padding-left: 12px;
     padding-right: 12px;
 }
 
-
+.progress-container {
+    margin-left: 15px;
+    position: sticky;
+    top: 0;
+    z-index: 1050;
+    background-color: white;
+    /* padding: 8px 16px; */
+    /* box-shadow: 0 2px 4px rgba(0,0,0,0.1); */
+}

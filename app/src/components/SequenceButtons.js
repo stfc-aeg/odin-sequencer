@@ -6,7 +6,7 @@ import { awaitExecutionComplete, awaitProcessExecutionComplete } from './useMess
 
 const sequencer_endpoint = new AdapterEndpoint("odin_sequencer", "http://127.0.0.1:8888");
 
-const SequenceButtons = ({ reloadModules, executionPanelRef, abortDisabled, setAbortDisabled }) => {
+const SequenceButtons = ({ reloadModules, executionPanelRef, setAbortDisabled }) => {
     const { displayLogMessages } = useMessageLog();
     const hasLoaded = useRef(false);
     const [detectChanges, setDetectChanges] = useState(false);
@@ -130,32 +130,10 @@ const SequenceButtons = ({ reloadModules, executionPanelRef, abortDisabled, setA
         });
     };
 
-    const abortSequence = () => {
-        let alert_message = "";
-        let alert_type = "";
-    
-        sequencer_endpoint.put({ 'abort': true })
-        .then(() => {
-            alert_message = "Abort sent to currently executing sequence";
-            alert_type = "primary";
-        })
-        .catch(error => {
-            alert_message = error.message;
-            alert_type = "danger";
-        })
-        .then(() => {
-            const alert = {
-                alert_message: alert_message,
-                alert_type: alert_type
-            };
-            handleAlerts(alert);
-        });
-    }
-
     return (
         <>
             <div class="button-row">
-                <button class="btn btn-primary" disabled={abortDisabled} onClick={abortSequence}>Abort</button>
+                <button className="btn btn-primary" onClick={handleReloadClick}>Reload</button>
                 <div className="center-text form-switch">
                     <input
                         className="form-check-input"
@@ -166,7 +144,6 @@ const SequenceButtons = ({ reloadModules, executionPanelRef, abortDisabled, setA
                     />
                     <label className="form-check-label" htmlFor="detect-module-changes-toggle"><b style={{ marginLeft: '8px' }}>Detect&nbsp;Changes</b></label>
                 </div>
-                <button className="btn btn-primary" onClick={handleReloadClick}>Reload</button>
             </div>
         </>
     );

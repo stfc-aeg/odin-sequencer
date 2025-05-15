@@ -49,8 +49,8 @@ function BasicExample({ postPutMethod }) {
       <div class="alert-box" id="alert-container"></div>
       <div class="flex-container">
         <div class="left">
-          <SequenceButtons reloadModules={fetchModules} executionPanelRef={executionPanelRef} abortDisabled={abortDisabled} setAbortDisabled={setAbortDisabled}></SequenceButtons>
-          <ExecutionPanel ref={executionPanelRef}></ExecutionPanel>
+          <SequenceButtons reloadModules={fetchModules} executionPanelRef={executionPanelRef} setAbortDisabled={setAbortDisabled}></SequenceButtons>
+          <ExecutionPanel ref={executionPanelRef} abortDisabled={abortDisabled} setAbortDisabled={setAbortDisabled}></ExecutionPanel>
           <Col sm={7}>
             <Accordion>
               <ModuleList sequence_modules={sequenceModules} executionPanelRef={executionPanelRef} setAbortDisabled={setAbortDisabled}></ModuleList>
