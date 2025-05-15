@@ -47,15 +47,20 @@ function BasicExample({ postPutMethod }) {
   return (
     <>
       <div class="alert-box" id="alert-container"></div>
+      <ExecutionPanel ref={executionPanelRef} abortDisabled={abortDisabled} setAbortDisabled={setAbortDisabled}></ExecutionPanel>
       <div class="flex-container">
         <div class="left">
           <SequenceButtons reloadModules={fetchModules} executionPanelRef={executionPanelRef} setAbortDisabled={setAbortDisabled}></SequenceButtons>
-          <ExecutionPanel ref={executionPanelRef} abortDisabled={abortDisabled} setAbortDisabled={setAbortDisabled}></ExecutionPanel>
-          <Col sm={7}>
-            <Accordion>
-              <ModuleList sequence_modules={sequenceModules} executionPanelRef={executionPanelRef} setAbortDisabled={setAbortDisabled}></ModuleList>
-            </Accordion>
-          </Col>
+          <div className="ui-card">
+            <div className="ui-card-header">Sequences</div>
+            <div className="ui-card-body message-box">
+              <Col sm={7}>
+                <Accordion>
+                  <ModuleList sequence_modules={sequenceModules} executionPanelRef={executionPanelRef} setAbortDisabled={setAbortDisabled}></ModuleList>
+                </Accordion>
+              </Col>
+            </div>
+          </div>
         </div>
         <div class="right">
           <MessageLog></MessageLog>

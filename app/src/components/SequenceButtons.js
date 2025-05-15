@@ -132,17 +132,20 @@ const SequenceButtons = ({ reloadModules, executionPanelRef, setAbortDisabled })
 
     return (
         <>
-            <div class="button-row">
-                <button className="btn btn-primary" onClick={handleReloadClick}>Reload</button>
-                <div className="center-text form-switch">
-                    <input
-                        className="form-check-input"
-                        type="checkbox"
-                        id="detect-module-changes-toggle"
-                        checked={detectChanges}
-                        onChange={e => toggleDetectChanges(e.target.checked)}
-                    />
-                    <label className="form-check-label" htmlFor="detect-module-changes-toggle"><b style={{ marginLeft: '8px' }}>Detect&nbsp;Changes</b></label>
+            <div className="ui-card">
+                <div className="ui-card-header">Sequence Changes</div>
+                <div className="ui-card-body button-row">
+                    <button className="btn btn-primary" onClick={handleReloadClick}>Reload</button>
+                    <div className="center-text form-switch">
+                        <input
+                            className="form-check-input"
+                            type="checkbox"
+                            id="detect-module-changes-toggle"
+                            checked={detectChanges}
+                            onChange={e => toggleDetectChanges(e.target.checked)}
+                        />
+                        <label className="form-check-label" htmlFor="detect-module-changes-toggle"><b style={{ marginLeft: '8px' }}>Detect&nbsp;Changes</b></label>
+                    </div>
                 </div>
             </div>
         </>

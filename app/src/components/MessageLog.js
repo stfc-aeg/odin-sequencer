@@ -1,8 +1,12 @@
 const MessageLog = () => {
     return (
         <>
-            <h4 style={{textAlign: "center"}}>Log Messages</h4>
-            <pre className="pre-scrollable" id="log-messages"></pre>
+            <div className="ui-card">
+                <div className="ui-card-header">Log Messages</div>
+                <div className="ui-card-body message-box">
+                    <pre className="pre-scrollable" id="log-messages"></pre>
+                </div>
+            </div>
         </>
     )
 }
