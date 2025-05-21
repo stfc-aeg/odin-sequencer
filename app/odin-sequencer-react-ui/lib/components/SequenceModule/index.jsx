@@ -1,5 +1,5 @@
 import Accordion from 'react-bootstrap/Accordion'
-import CardRow from './CardRow'
+import CardRow from '../CardRow'
 import { Row } from 'react-bootstrap'
 
 /* Constructs Accordion layer for each sequence module, then intialises the CardRow to display sequences. */

@@ -46,10 +46,10 @@ function BasicExample({ postPutMethod }) {
 
   return (
     <>
-      <div class="alert-box" id="alert-container"></div>
+      <div className="alert-box" id="alert-container"></div>
       <ExecutionPanel ref={executionPanelRef} abortDisabled={abortDisabled} setAbortDisabled={setAbortDisabled}></ExecutionPanel>
-      <div class="flex-container">
-        <div class="left">
+      <div className="flex-container">
+        <div className="left">
           <div className="ui-card">
             <div className="ui-card-header d-flex align-items-center">Sequences <SequenceButtons reloadModules={fetchModules} executionPanelRef={executionPanelRef} setAbortDisabled={setAbortDisabled}></SequenceButtons></div>
             <div className="ui-card-body message-box">
@@ -61,7 +61,7 @@ function BasicExample({ postPutMethod }) {
             </div>
           </div>
         </div>
-        <div class="right">
+        <div className="right">
           <MessageLog></MessageLog>
         </div>
       </div>

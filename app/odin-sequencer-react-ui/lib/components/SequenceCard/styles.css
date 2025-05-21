@@ -1,0 +1,103 @@
+.execute-btn {
+    float: right;
+}
+
+.btn-info, .btn-success{
+    line-height: 1rem !important;
+    font-size: 0.8rem !important;
+    height: 24px !important;
+    padding-left: 0.1rem !important;
+    padding-right: 0.1rem !important;
+    padding-top: 0.1rem !important;
+    padding-bottom: 0.1rem !important;
+}
+
+.btn-info {
+    float: left;
+}
+
+.btn-width {
+    width: 58px;
+}
+
+.card-title {
+    font-size: 0.9rem !important;
+    text-align: center;
+}
+
+.card-body {
+    border-radius: 0px;
+    padding: 4px !important;
+    width: 184px;
+    height: 55px;
+}
+
+.card {
+    max-width: 184px;
+}
+
+.col {
+    max-width: 184px !important;
+    padding-left: 0px !important;
+    padding-right: 0px !important;
+}
+
+.btn-width {
+    width: 58px;
+}
+
+.card-new{
+    max-width: 170px;
+    min-width: 210px;
+}
+
+.col-card {
+    padding-top: 4px;
+    max-width: 220px;
+}
+
+.sticky{
+    height: 100%;
+    width: 48%;
+    float:right;
+    position: fixed;
+}
+
+.custom-row-border{
+    margin-right:0px;
+    margin-left: 0px;
+}
+
+.row{
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+}
+
+.accordion-button{
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+}
+
+.accordion-body {
+    padding: 0px !important;
+}
+
+.card-header {
+    color: #007bff;
+}
+
+.col-sm-7 {
+    width: 100% !important;
+}
+
+@media (max-width: 768px) {
+    .left, .right {
+        width: 100%;
+    }
+}
+
+.alert-bar {
+    padding-top: 18px;
+}

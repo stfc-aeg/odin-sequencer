@@ -1,0 +1,13 @@
+.progress-container {
+    margin-left: 15px;
+    position: sticky;
+    top: 0;
+    z-index: 1050;
+    background-color: white;
+}
+
+.row{
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+}
+

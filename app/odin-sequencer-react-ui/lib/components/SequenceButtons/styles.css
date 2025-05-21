@@ -1,0 +1,7 @@
+.button-row {
+    display: flex;
+    justify-content: flex-end;
+    width: 90%;
+    gap: 50px;
+    margin: 0 auto;
+}
