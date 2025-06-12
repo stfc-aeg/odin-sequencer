@@ -92,8 +92,7 @@ class CommandSequencer:
             'execution_progress': (lambda: self.manager.progress, None),
             'abort': (None, self.abort_sequence),
             'is_aborting': (lambda: self.manager.abort_sequence, None),
-            'process_tasks': (lambda: self.process_tasks, None),
-            'log_messages': (lambda: self.log_messages, None)
+            'process_tasks': (lambda: self.process_tasks, None)
         })
 
     def get(self, path, kwargs=None):
@@ -108,8 +107,7 @@ class CommandSequencer:
         if path == "log_messages":
             # Use query parameter if present
             timestamp = kwargs.get("last_message_timestamp", [""])[0] if kwargs else ""
-            self.get_log_messsages(timestamp)
-            return {"log_messages": self.log_messages}
+            return self.get_log_messsages(timestamp)
         
         try:
             return self.param_tree.get(path)
@@ -372,8 +370,9 @@ class CommandSequencer:
                     break
         else:
             logs = list(self.log_messages_deque)
-
-        self.log_messages = [(str(timestamp), log_message) for timestamp, log_message in logs]
+        
+        log_messages = [(str(timestamp), log_message) for timestamp, log_message in logs]
+        return {"log_messages": log_messages}
 
     def _get_seq_param_values(self, seq):
         """This method gets parameter values for the provided sequence from the parameter tree.
