@@ -93,11 +93,10 @@ class CommandSequencer:
             'abort': (None, self.abort_sequence),
             'is_aborting': (lambda: self.manager.abort_sequence, None),
             'process_tasks': (lambda: self.process_tasks, None),
-            'log_messages': (lambda: self.log_messages, None),
-            'last_message_timestamp': (lambda: self.last_message_timestamp, self.get_log_messsages)
+            'log_messages': (lambda: self.log_messages, None)
         })
 
-    def get(self, path):
+    def get(self, path, kwargs=None):
         """Get parameters from the underlying parameter tree.
 
         This method simply wraps underlying ParameterTree method so that an exceptions can be
@@ -106,6 +105,12 @@ class CommandSequencer:
         :param path: path of parameter tree to get
         :returns: parameter tree at that path as a dictionary
         """
+        if path == "log_messages":
+            # Use query parameter if present
+            timestamp = kwargs.get("last_message_timestamp", [""])[0] if kwargs else ""
+            self.get_log_messsages(timestamp)
+            return {"log_messages": self.log_messages}
+        
         try:
             return self.param_tree.get(path)
         except ParameterTreeError as error:

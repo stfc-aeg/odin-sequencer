@@ -18,7 +18,7 @@ const SequenceButtons = ({ reloadModules, executionPanelRef, setAbortDisabled })
 
     useEffect(() => {
         if (!hasLoaded.current) {
-            sequencer_endpoint.put({ 'last_message_timestamp': "" });
+            //sequencer_endpoint.put({ 'last_message_timestamp': "" });
             hasLoaded.current = true;
             displayLogMessages();
     
