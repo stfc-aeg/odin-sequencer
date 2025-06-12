@@ -1,15 +1,15 @@
-import sequencer_endpoint from "./sequencerEndpoint";
 import { handleAlerts } from './alertUtils';
 
 let lastMessageTimestampRef = null;
 
-export const useMessageLog = () => {
+export const useMessageLog = ({ sequencer_endpoint }) => {
 
     const getLogMessages = () => {
-        const payload = lastMessageTimestampRef ? { last_message_timestamp: lastMessageTimestampRef } : {};
+        const path = lastMessageTimestampRef
+            ? `log_messages?last_message_timestamp=${encodeURIComponent(lastMessageTimestampRef)}`
+            : 'log_messages';
 
-        return sequencer_endpoint.put(payload)
-            .then(() => sequencer_endpoint.get('log_messages'));
+        return sequencer_endpoint.get(path);
     };
 
     const displayLogMessages = () => {
@@ -42,14 +42,14 @@ export const useMessageLog = () => {
     return { displayLogMessages };
 };
 
-export const awaitExecutionComplete = (displayLogMessages, executionPanelRef, setAbortDisabled) => {
+export const awaitExecutionComplete = (displayLogMessages, executionPanelRef, setAbortDisabled, sequencer_endpoint) => {
     sequencer_endpoint.get('is_executing')
     .then(result => {
         displayLogMessages();
         const is_executing = result.is_executing
         if (is_executing) {
             executionPanelRef.current?.updateExecutionProgress?.();
-            setTimeout(() => awaitExecutionComplete(displayLogMessages, executionPanelRef, setAbortDisabled), 500);
+            setTimeout(() => awaitExecutionComplete(displayLogMessages, executionPanelRef, setAbortDisabled, sequencer_endpoint), 500);
         } else {
             // disable button toggle logic for abort TODO (true)
             setAbortDisabled(true);
@@ -58,13 +58,13 @@ export const awaitExecutionComplete = (displayLogMessages, executionPanelRef, se
     });
 }
 
-export const awaitProcessExecutionComplete = (displayLogMessages) => {
+export const awaitProcessExecutionComplete = (displayLogMessages, sequencer_endpoint) => {
     sequencer_endpoint.get('process_tasks')
     .then(result => {
         displayLogMessages();
         const process_tasks = result.process_tasks
         if (process_tasks.length !== 0) {
-            setTimeout(() => awaitProcessExecutionComplete(displayLogMessages), 500);
+            setTimeout(() => awaitProcessExecutionComplete(displayLogMessages, sequencer_endpoint), 500);
         }
     });
 }

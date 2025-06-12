@@ -3,7 +3,6 @@ import Button from 'react-bootstrap/Button'
 import { useState, useRef, useEffect } from 'react'
 import { Modal } from 'react-bootstrap'
 import ModalParams from '../ModalParams'
-import sequencer_endpoint from "../sequencerEndpoint";
 import { handleAlerts } from '../alertUtils';
 import { useMessageLog, awaitExecutionComplete, awaitProcessExecutionComplete } from '../useMessageLog';
 
@@ -11,8 +10,8 @@ import './styles.css';
 
 /* Constructs a card for each sequence within the module */
 
-const SequenceCard = ({ sequence, header, row_title, executionPanelRef, setAbortDisabled }) => {
-  const { displayLogMessages } = useMessageLog();
+const SequenceCard = ({ sequence, header, row_title, executionPanelRef, setAbortDisabled, sequencer_endpoint }) => {
+  const { displayLogMessages } = useMessageLog({ sequencer_endpoint });
   const [executionStarted, setExecutionStarted] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const inputRefs = useRef(new Map());
@@ -54,8 +53,8 @@ const SequenceCard = ({ sequence, header, row_title, executionPanelRef, setAbort
           .catch((error) => {
             handleError(error);
           });
-          setTimeout(() => awaitExecutionComplete(displayLogMessages, executionPanelRef, setAbortDisabled), 250);
-          setTimeout(() => awaitProcessExecutionComplete(displayLogMessages), 500);
+          setTimeout(() => awaitExecutionComplete(displayLogMessages, executionPanelRef, setAbortDisabled, sequencer_endpoint), 250);
+          setTimeout(() => awaitProcessExecutionComplete(displayLogMessages, sequencer_endpoint), 500);
       })
       .catch((error) => {
         handleError(error);
@@ -69,8 +68,8 @@ const SequenceCard = ({ sequence, header, row_title, executionPanelRef, setAbort
       setAbort(false);
       setExecutionStarted(true);
       sequencer_endpoint.put({ 'execute': header }).catch(handleError);
-      setTimeout(() => awaitExecutionComplete(displayLogMessages, executionPanelRef, setAbortDisabled), 250);
-      setTimeout(() => awaitProcessExecutionComplete(displayLogMessages), 500);
+      setTimeout(() => awaitExecutionComplete(displayLogMessages, executionPanelRef, setAbortDisabled, sequencer_endpoint), 250);
+      setTimeout(() => awaitProcessExecutionComplete(displayLogMessages, sequencer_endpoint), 500);
     }
   };
 

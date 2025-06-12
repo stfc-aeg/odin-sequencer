@@ -1,13 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { useMessageLog } from '../useMessageLog';
-import sequencer_endpoint from "../sequencerEndpoint";
 import { handleAlerts } from '../alertUtils';
 import { awaitExecutionComplete, awaitProcessExecutionComplete } from '../useMessageLog';
 
 import './styles.css';
 
-const SequenceButtons = ({ reloadModules, executionPanelRef, setAbortDisabled }) => {
-    const { displayLogMessages } = useMessageLog();
+const SequenceButtons = ({ reloadModules, executionPanelRef, setAbortDisabled, sequencer_endpoint }) => {
+    const { displayLogMessages } = useMessageLog({ sequencer_endpoint });
     const hasLoaded = useRef(false);
     const [detectChanges, setDetectChanges] = useState(false);
     const pollingRef = useRef(false);
@@ -18,7 +17,6 @@ const SequenceButtons = ({ reloadModules, executionPanelRef, setAbortDisabled })
 
     useEffect(() => {
         if (!hasLoaded.current) {
-            sequencer_endpoint.put({ 'last_message_timestamp': "" });
             hasLoaded.current = true;
             displayLogMessages();
     
@@ -43,8 +41,8 @@ const SequenceButtons = ({ reloadModules, executionPanelRef, setAbortDisabled })
                     // disable button toggle logic for abort TODO (false)
                     setAbort(false);
                     executionPanelRef.current?.displayExecution(result.execute);
-                    awaitExecutionComplete(displayLogMessages, executionPanelRef, setAbortDisabled);
-                    awaitProcessExecutionComplete(displayLogMessages);
+                    awaitExecutionComplete(displayLogMessages, executionPanelRef, setAbortDisabled, sequencer_endpoint);
+                    awaitProcessExecutionComplete(displayLogMessages, sequencer_endpoint);
                 }
                 else
                 {

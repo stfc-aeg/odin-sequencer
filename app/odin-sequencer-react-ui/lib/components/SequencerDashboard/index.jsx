@@ -2,13 +2,12 @@ import { useRef, useEffect, useState } from 'react';
 import ExecutionPanel from '../ExecutionPanel';
 import SequenceTable from '../SequenceTable';
 
-import sequencer_endpoint from "../sequencerEndpoint";
 import MessageLog from '../MessageLog';
 
 import './styles.css';
 
 
-function BasicExample({ postPutMethod }) {
+function BasicExample({ sequencer_endpoint }) {
   const [sequenceModules, setSequenceModules] = useState({});
   const [error, setError] = useState({});
   const [abortDisabled, setAbortDisabled] = useState(true);
@@ -33,10 +32,10 @@ function BasicExample({ postPutMethod }) {
   return (
     <>
       <div className="alert-box" id="alert-container"></div>
-      <ExecutionPanel ref={executionPanelRef} abortDisabled={abortDisabled} setAbortDisabled={setAbortDisabled}></ExecutionPanel>
+      <ExecutionPanel ref={executionPanelRef} abortDisabled={abortDisabled} setAbortDisabled={setAbortDisabled} sequencer_endpoint={sequencer_endpoint}></ExecutionPanel>
       <div className="flex-container">
         <div className="left">
-          <SequenceTable fetchModules={fetchModules} sequenceModules={sequenceModules} executionPanelRef={executionPanelRef} setAbortDisabled={setAbortDisabled}></SequenceTable>
+          <SequenceTable fetchModules={fetchModules} sequenceModules={sequenceModules} executionPanelRef={executionPanelRef} setAbortDisabled={setAbortDisabled} sequencer_endpoint={sequencer_endpoint}></SequenceTable>
         </div>
         <div className="right">
           <MessageLog></MessageLog>

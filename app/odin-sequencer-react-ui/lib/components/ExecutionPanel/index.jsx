@@ -1,10 +1,9 @@
 import { useRef, useImperativeHandle, forwardRef } from 'react';
-import sequencer_endpoint from "../sequencerEndpoint";
 import { handleAlerts } from '../alertUtils';
 
 import './styles.css';
 
-const ExecutionPanel = forwardRef(({ abortDisabled, setAbortDisabled }, ref) => {
+const ExecutionPanel = forwardRef(({ abortDisabled, setAbortDisabled, sequencer_endpoint }, ref) => {
     const spinnerRef = useRef(null);
     const textRef = useRef(null);
     const progressRef = useRef(null);
@@ -91,7 +90,7 @@ const ExecutionPanel = forwardRef(({ abortDisabled, setAbortDisabled }, ref) => 
                             </div>
                         </div>
                         {!abortDisabled && (
-                            <button class="btn btn-primary" onClick={abortSequence}>Abort</button>
+                            <button className="btn btn-primary" onClick={abortSequence}>Abort</button>
                         )}
                     </div>
 
