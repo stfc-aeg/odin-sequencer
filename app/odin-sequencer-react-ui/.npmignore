@@ -1,0 +1,7 @@
+lib/
+dist/
+node_modules/
+.env.production
+eslint.config.js
+package-lock.json
+vite.config.js
