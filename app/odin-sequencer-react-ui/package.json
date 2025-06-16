@@ -25,13 +25,6 @@
     "preview": "vite preview",
     "prepublishOnly": "npm run build"
   },
-  "peerDependencies": {
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "bootstrap": "^5.3.3",
-    "odin-react": "github:stfc-aeg/odin-react",
-    "react-bootstrap": "^2.10.4"
-  },
   "devDependencies": {
     "@eslint/js": "^9.25.0",
     "@testing-library/jest-dom": "^5.17.0",
