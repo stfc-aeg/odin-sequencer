@@ -33,7 +33,6 @@ class CommandSequencer:
         self.reload = False
         self.module_reload_failed = False
         self.execute_seq_name = ''
-        self.is_executing = False
         self.process_tasks = []
         self.process_group_tasks = {}
         self.log_messages = []
@@ -87,7 +86,7 @@ class CommandSequencer:
             'module_modifications_detected': (self.module_modifications_detected, None),
             'reload': (lambda: self.reload, self.set_reload),
             'execute': (lambda: self.execute_seq_name, self.execute_sequence),
-            'is_executing': (lambda: self.is_executing, None),
+            'is_executing': (lambda: self.manager.is_executing, None),
             'execution_progress': (lambda: self.manager.progress, None),
             'abort': (None, self.abort_sequence),
             'is_aborting': (lambda: self.manager.abort_sequence, None),
@@ -185,7 +184,7 @@ class CommandSequencer:
             raise CommandSequenceError(
                 'Cannot start the reloading process as there are no sequence modules loaded')
 
-        if self.is_executing:
+        if self.manager.is_executing:
             raise CommandSequenceError(
                 'Cannot start the reloading process while a sequence is being executed')
 
@@ -245,7 +244,7 @@ class CommandSequencer:
         the method is called while the reloading process is in progress or a sequence is being
         executed.
         """
-        if self.is_executing:
+        if self.manager.is_executing:
             raise CommandSequenceError(
                 'Cannot execute command sequence while another one is being executed')
 
@@ -267,7 +266,6 @@ class CommandSequencer:
 
         kwargs = self._get_seq_param_values(seq)
         self.manager.reset_progress()
-        self.is_executing = True
         self.execute_seq_name = seq_mod + "/" + seq_name
         self.thread = threading.Thread(target=self._execute, args=(seq_name,), kwargs=kwargs)
         self.thread.start()
@@ -279,7 +277,6 @@ class CommandSequencer:
             self.manager.log_message('<b style="color:red">Execution error</b>: {}: {}'.format(seq_name, error))
             logging.error("Sequence execution error: {}: {}".format(seq_name, error))
         finally:
-            self.is_executing = False
             self.execute_seq_name = ""
             if self.manager.abort_sequence:
                 self.manager.log_message(
@@ -290,7 +287,7 @@ class CommandSequencer:
 
     def abort_sequence(self, abort):
 
-        if abort and not self.is_executing:
+        if abort and not self.manager.is_executing:
             raise CommandSequenceError("Cannot abort when no sequence is executing")
 
         logging.debug("Aborting sequence with value {}".format(abort))
