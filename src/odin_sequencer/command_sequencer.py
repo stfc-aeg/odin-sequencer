@@ -13,14 +13,13 @@ from datetime import datetime
 from odin_sequencer import CommandSequenceManager, CommandSequenceError
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 
-
 class CommandSequencer:
     """CommandSequencer object representing the command sequencer manager.
 
     Facilitates communcation to the command sequence manager.
     """
 
-    def __init__(self, path_or_paths=None):
+    def __init__(self, options):
         """Initialise the CommandSequencer object.
 
         This constructor initialises the CommandSequencer object, creating a command
@@ -28,7 +27,7 @@ class CommandSequencer:
         to communicate with the manager.
         """
 
-        self.initial_path_or_paths = path_or_paths
+        self.initial_path_or_paths = options.get('sequence_location')
 
         self.detect_module_modifications = False
         self.reload = False
@@ -334,7 +333,7 @@ class CommandSequencer:
                 return True
         except ValueError as error:
             raise CommandSequenceError('Empty process task list while trying to remove group {} and task {}'.format(group_uuid, task_uuid))
-    
+
     def log(self, *args, **kwargs):
         """This method is register as an external logger with the manager. Doing this results
         in all the print messages in the loaded sequences to be passed to this method. The method
@@ -407,7 +406,7 @@ class CommandSequencer:
             list_val = map(self._val_to_float, list_val)
 
         return list(list_val)
-    
+
     def _add_context(self, name, obj):
         """This method adds an object to the manager context."""
         self.manager.add_context(name, obj)
@@ -415,7 +414,7 @@ class CommandSequencer:
     def _start_process_monitor(self, process_monitor):
         """Start thread in background for the process monitor."""
         self.process_monitor_thread = threading.Thread(target=process_monitor, args=(self.log, self.start_process_task, self.finish_process_task, self.start_process_group_task, self.finish_process_group_task), daemon=True)
-        self.process_monitor_thread.start()    
+        self.process_monitor_thread.start()
 
     @staticmethod
     def _val_to_bool(val):
