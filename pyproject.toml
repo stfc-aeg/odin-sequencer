@@ -58,3 +58,20 @@ name = "Tim Nicholls"
 
 [tool.setuptools_scm]
 version_file = "src/odin_sequencer/_version.py"
+
+[tool.ruff]
+src = ["src", "tests"]
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "D",    # docstrings
+    "C",    # flake8-comprehensions
+    "E",    # pycodestyle errors
+    "F",    # pyflakes rules
+    "W",    # pycodestyle warnings
+    "I",    # isort
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "pep257"
