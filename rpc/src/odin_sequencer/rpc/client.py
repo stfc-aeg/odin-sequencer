@@ -88,45 +88,47 @@ class OdinSequencerClient:
             request: The RpcRequest object to send.
 
         Returns:
-            The result from the RPC response.
+            The result from the RPC response if available
+        Raises:
+            OdinSequencerClientError: If an error response is received and emit_exceptions is True
 
         """
         self.ctrl_socket.send(request.encode())
 
-        result = None
-        await_response = True
+        response = self.await_response()
 
-        while await_response:
-            socks = dict(self.poller.poll(1000))
-            if self.ctrl_socket in socks and socks[self.ctrl_socket] == zmq.POLLIN:
-                reply = self.ctrl_socket.recv()
-                result = self.handle_reply(reply)
-                await_response = False
-            if self.log_socket in socks and socks[self.log_socket] == zmq.POLLIN:
-                msg = self.log_socket.recv_multipart()
-                self.handle_log_message(msg)
-
-        return result
-
-    def handle_reply(self, reply: bytes):
-        """Handle a reply message from the sequencer server.
-
-        Args:
-            reply: The reply bytes received from the server.
-
-        Returns:
-            The result contained in the response, or raises an error if present.
-
-        """
-        response = self.response_adapter.decode(reply)
         if isinstance(response, RpcErrorResponse):
             error_msg = f"{response.error.message} : {response.error.data}"
             if self.emit_exceptions:
                 raise OdinSequencerClientError(error_msg)
             else:
                 print(error_msg)
+                return None
 
         return response.result
+
+    def await_response(self) -> Any:
+        """Wait for and return the next response from the RPC server.
+
+        Polls both the control and log sockets, handling log messages and returning
+        the decoded response from the control socket when available.
+
+        Returns:
+            Any: The decoded response from the RPC server.
+
+        """
+        response = None
+
+        while response is None:
+            socks = dict(self.poller.poll(1000))
+            if self.ctrl_socket in socks and socks[self.ctrl_socket] == zmq.POLLIN:
+                reply = self.ctrl_socket.recv()
+                response = self.response_adapter.decode(reply)
+            if self.log_socket in socks and socks[self.log_socket] == zmq.POLLIN:
+                msg = self.log_socket.recv_multipart()
+                self.handle_log_message(msg)
+
+        return response
 
     def handle_log_message(self, msg: List[bytes]):
         """Handle a log message received from the sequencer server.
@@ -195,7 +197,10 @@ class OdinSequencerClient:
 
         """
         abort_request = RpcRequest(method="abort", id=self._next_id())
-        return self.do_request(abort_request)
+        result = self.do_request(abort_request)
+        # Flush response to abort command
+        self.await_response()
+        return result
 
     def reload(self):
         """Reload the sequences on the sequencer.
