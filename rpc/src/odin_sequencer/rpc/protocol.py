@@ -175,15 +175,25 @@ class RpcResponse(JsonRpcModel):
             The serialized value, either as a dictionary for ndarrays or the original value
 
         """
-        if has_numpy and isinstance(value, NpArrayType):
-            return {
-                "type": "ndarray",
-                "dtype": str(value.dtype),
-                "shape": list(value.shape),
-                "data": base64.b64encode(value.tobytes()).decode("utf-8"),
-            }
-        else:
-            return value
+
+        def _recursive_serialize(value: Any) -> Any:
+            if isinstance(value, list):
+                return [_recursive_serialize(v) for v in value]
+            elif isinstance(value, tuple):
+                return tuple([_recursive_serialize(v) for v in value])
+            elif isinstance(value, dict):
+                return {k: _recursive_serialize(v) for k, v in value.items()}
+            elif has_numpy and isinstance(value, NpArrayType):
+                return {
+                    "type": "ndarray",
+                    "dtype": str(value.dtype),
+                    "shape": list(value.shape),
+                    "data": base64.b64encode(value.tobytes()).decode("utf-8"),
+                }
+            else:
+                return value
+
+        return _recursive_serialize(value)
 
     @field_validator("result", mode="before")
     def validate_result(cls, value):
@@ -207,18 +217,29 @@ class RpcResponse(JsonRpcModel):
             If an unknown type tag is encountered
 
         """
-        if isinstance(value, dict) and "type" in value:
-            if value["type"] == "ndarray" and all(k in value for k in ["data", "dtype", "shape"]):
-                if has_numpy:
-                    data = base64.b64decode(value["data"])
-                    array = np.frombuffer(data, dtype=value["dtype"])
-                    return array.reshape(value["shape"])
+
+        def _recursive_validate(value: Any) -> Any:
+            if isinstance(value, list):
+                return [_recursive_validate(v) for v in value]
+            elif isinstance(value, tuple):
+                return tuple([_recursive_validate(v) for v in value])
+            elif isinstance(value, dict):
+                if (
+                    all(k in value for k in ["type", "data", "dtype", "shape"])
+                    and value["type"] == "ndarray"
+                ):
+                    if has_numpy:
+                        data = base64.b64decode(value["data"])
+                        array = np.frombuffer(data, dtype=value["dtype"])
+                        return array.reshape(value["shape"])
+                    else:
+                        raise ImportError("Result contains ndarray but numpy is not installed")
                 else:
-                    raise ImportError("Result type is ndarray but numpy is not installed")
+                    return {k: _recursive_validate(v) for k, v in value.items()}
             else:
-                raise TypeError(f"Unknown type tag: {value['type']}")
-        else:
-            return value
+                return value
+
+        return _recursive_validate(value)
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
