@@ -1,0 +1,75 @@
+[build-system]
+requires = ["setuptools>=64", "setuptools_scm>=8", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src/"]
+include = ["odin_sequencer.rpc"]
+
+[project]
+name = "odin_sequencer_rpc"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+description = "A python command sequencer to allow easy scripting in odin-control systems"
+dependencies = [
+    "pyzmq",
+    "pydantic>=2.0.0",
+]
+dynamic = ["version"]
+license.file = "LICENSE"
+readme = "README.rst"
+requires-python = ">=3.7"
+
+[project.optional-dependencies]
+dev = [
+    "black",
+    "isort",
+    "mypy",
+    "pipdeptree",
+    "pre-commit",
+    "pydata-sphinx-theme>=0.12",
+    "pytest",
+    "pytest-cov",
+    "ruff",
+    "sphinx-autobuild",
+    "sphinx-copybutton",
+    "sphinx-design",
+    "tox-direct",
+    "types-mock",
+]
+
+[project.urls]
+GitHub = "https://github.com/stfc-aeg/odin-sequencer.git"
+
+[[project.authors]] # Further authors may be added by duplicating this section
+email = "tim.nicholls@stfc.ac.uk"
+name = "Tim Nicholls"
+
+[tool.setuptools_scm]
+root = ".."
+version_file = "src/odin_sequencer/rpc/_version.py"
+
+[tool.ruff]
+src = ["src"]
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "D",    # docstrings
+    "C",    # flake8-comprehensions
+    "E",    # pycodestyle errors
+    "F",    # pyflakes rules
+    "W",    # pycodestyle warnings
+    "I",    # isort
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "pep257"
