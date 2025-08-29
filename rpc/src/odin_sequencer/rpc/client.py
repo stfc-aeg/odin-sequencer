@@ -45,7 +45,7 @@ class OdinSequencerClient:
         """
         self.ctrl_endpoint = f"tcp://{seq_address}:{ctrl_port}"
         self.log_endpoint = f"tcp://{seq_address}:{log_port}"
-        self.emit_exceptions = emit_exceptions
+        self._emit_exceptions = emit_exceptions
 
         self.ctx = zmq.Context()
 
@@ -99,7 +99,7 @@ class OdinSequencerClient:
 
         if isinstance(response, RpcErrorResponse):
             error_msg = f"{response.error.message} : {response.error.data}"
-            if self.emit_exceptions:
+            if self._emit_exceptions:
                 raise OdinSequencerClientError(error_msg)
             else:
                 print(error_msg)
@@ -212,6 +212,32 @@ class OdinSequencerClient:
         reload_request = RpcRequest(method="reload", id=self._next_id())
         result = self.do_request(reload_request)
         print(f"Reload {'succeeded' if result else 'failed'}")
+
+    def emit_exceptions(self, emit_exceptions: bool):
+        """Set whether to raise exceptions on RPC errors.
+
+        Args:
+            emit_exceptions: If True, exceptions are raised on RPC errors; otherwise,
+                             errors are printed.
+
+        """
+        self._emit_exceptions = bool(emit_exceptions)
+
+    def __getattr__(self, name: str):
+        """Dynamically handle method calls on the client.
+
+        Args:
+            name: The method name to call.
+
+        Returns:
+            Callable that executes the method via RPC.
+
+        """
+
+        def wrapper(*args, **kwargs):
+            return self.execute(name, *args, **kwargs)
+
+        return wrapper
 
 
 class Context:
