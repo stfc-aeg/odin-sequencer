@@ -210,7 +210,8 @@ class OdinSequencerClient:
 
         """
         reload_request = RpcRequest(method="reload", id=self._next_id())
-        return self.do_request(reload_request)
+        result = self.do_request(reload_request)
+        print(f"Reload {'succeeded' if result else 'failed'}")
 
 
 class Context:

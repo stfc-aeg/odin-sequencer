@@ -302,4 +302,4 @@ class RpcServer:
         logging.debug("Reload sequences")
         self.sequencer.set_reload(True)
 
-        return True
+        return not self.sequencer.module_reload_failed
