@@ -23,9 +23,8 @@ def add(a=0, b=0):
 
 def exceptional_add(a=0, b=0):
     sum = a + b
-    print("Exceptional add")
+    print("Adding {} and {}".format(a, b))
     if sum == 42:
-        print("Boom")
         raise ValueError(
             "The answer to the ultimate question of life, the universe, and everything is not allowed here."
         )
