@@ -9,8 +9,14 @@ Tim Nicholls, STFC Detector Systems Software Group
 """
 
 import base64
-import enum
-from typing import Annotated, Any, Literal, Optional, Self, Union
+from enum import IntEnum
+
+try:
+    from enum import StrEnum
+except ImportError:
+    from backports.strenum import StrEnum
+from typing import Annotated, Any, Literal, Optional, Union
+from typing_extensions import Self
 
 from pydantic import (
     BaseModel,
@@ -69,7 +75,7 @@ class JsonRpcModel(BaseModel):
         return cls.model_validate_json(json.decode("utf-8"))
 
 
-class ExecuteScope(enum.StrEnum):
+class ExecuteScope(StrEnum):
     """Enumeration of execution scopes for RPC execute calls.
 
     SEQUENCE: Execute a sequence
@@ -244,7 +250,7 @@ class RpcResponse(JsonRpcModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
-class RpcErrorCode(enum.IntEnum):
+class RpcErrorCode(IntEnum):
     """Enumeration of standard and implementation-defined error codes for JSON-RPC responses.
 
     ParseError : Invalid JSON was received

@@ -22,6 +22,7 @@ description = "RPC interface to odin-sequencer"
 dependencies = [
     "pyzmq",
     "pydantic>=2.0.0",
+    "backports.strenum (>=1.3.1,<2.0) ; python_version < '3.11'"
 ]
 dynamic = ["version"]
 license.file = "LICENSE"
