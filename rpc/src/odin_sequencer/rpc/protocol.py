@@ -13,22 +13,24 @@ from enum import IntEnum
 
 try:
     from enum import StrEnum
-except ImportError:
-    from backports.strenum import StrEnum
-from typing import Annotated, Any, Literal, Optional, Union
-from typing_extensions import Self
+except ImportError:  # Python < 3.11
+    from enum import Enum
 
-from pydantic import (
-    BaseModel,
-    ConfigDict,
-    Discriminator,
-    Tag,
-    TypeAdapter,
-    ValidationError,  # noqa: F401
-    field_serializer,
-    field_validator,
-    model_validator,
-)
+    class StrEnum(str, Enum):
+        """String enumeration base class for Python versions < 3.11.
+
+        Provides string enumeration functionality similar to the built-in StrEnum in Python 3.11+.
+        This avoids the need for an external dependency like backports.strenum.
+        """
+
+        def __str__(self) -> str:
+            """Return the string representation of the enum member."""
+            return self.value
+
+
+import json
+from dataclasses import asdict, dataclass, field, is_dataclass
+from typing import Any, ClassVar, Optional, Union
 
 # If numpy is available, add the ndarray type to the result types
 result_types = [Any]
@@ -45,26 +47,120 @@ except ImportError:
 Result = Optional[Union[tuple(result_types)]]
 
 
-class JsonRpcModel(BaseModel):
+class ValidationError(Exception):
+    """Exception raised for validation errors in protocol models."""
+
+    pass
+
+
+class JsonRpcEncoder(json.JSONEncoder):
+    """Custom JSON encoder for JSON-RPC messages.
+
+    Handles serialization of additional types such as numpy arrays.
+    """
+
+    def default(self, obj: Any) -> Any:
+        """Override the default method to handle additional types.
+
+        Parameters
+        ----------
+        obj : Any
+            The object to serialize.
+
+        Returns
+        -------
+            A JSON-serializable representation of the object.
+
+        """
+        if has_numpy and isinstance(obj, NpArrayType):
+            return {
+                "type": "ndarray",
+                "dtype": str(obj.dtype),
+                "shape": list(obj.shape),
+                "data": base64.b64encode(obj.tobytes()).decode("utf-8"),
+            }
+        elif is_dataclass(obj):
+            return asdict(obj)
+        return super().default(obj)
+
+
+class JsonRpcDecoder(json.JSONDecoder):
+    """Custom JSON decoder for JSON-RPC messages.
+
+    Handles deserialization of additional types such as numpy arrays.
+    """
+
+    def __init__(self, *args, **kwargs):
+        """Initialize the decoder with a custom object hook."""
+        super().__init__(*args, object_hook=self.object_hook, **kwargs)
+
+    def object_hook(self, obj: Any) -> Any:
+        """Handle additional types during decoding in the custom object hook.
+
+        Parameters
+        ----------
+        obj : Any
+            The JSON object to decode.
+
+        Returns
+        -------
+            The decoded object, potentially converted to a specific type.
+
+        """
+        if (
+            isinstance(obj, dict)
+            and all(key in obj for key in ("type", "dtype", "shape", "data"))
+            and obj["type"] == "ndarray"
+        ):
+            if has_numpy:
+                data = base64.b64decode(obj["data"])
+                array = np.frombuffer(data, dtype=obj["dtype"]).reshape(obj["shape"])
+                return array
+            else:
+                raise ValidationError("JSON message contains ndarray but numpy is not available")
+        return obj
+
+
+@dataclass
+class JsonRpcModel:
     """Base model for JSON-RPC 2.0 messages.
 
     Provides common fields and encode/decode methods for JSON-RPC communication.
     """
 
-    jsonrpc: Literal["2.0"] = "2.0"
-    id: int | str | None
+    JSONRPC_VERSION: ClassVar[str] = "2.0"
+    jsonrpc: str = field(default=JSONRPC_VERSION, init=False)
+    id: Union[int, str]
 
     def encode(self) -> bytes:
         """Encode the model to a JSON-formatted UTF-8 byte string."""
-        return self.model_dump_json(round_trip=True).encode("utf-8")
+        return json.dumps(self.__dict__, cls=JsonRpcEncoder).encode("utf-8")
 
     @classmethod
-    def decode(cls, json: bytes):
+    def validate_version(cls, obj: dict):
+        """Validate that the provided version matches the JSON-RPC version.
+
+        Parameters
+        ----------
+        obj : dict
+            The JSON-RPC message dictionary to validate.
+
+        Raises
+        ------
+            ValidationError: If the provided version does not match the expected JSON-RPC version
+
+        """
+        if obj.get("jsonrpc", cls.JSONRPC_VERSION) != cls.JSONRPC_VERSION:
+            raise ValidationError(f"Invalid jsonrpc version: {obj.get('jsonrpc')}")
+        obj.pop("jsonrpc", None)
+
+    @classmethod
+    def decode(cls, json_bytes: bytes) -> "JsonRpcModel":
         """Decode a JSON-formatted UTF-8 byte string into a model instance.
 
         Parameters
         ----------
-        json : bytes
+        json_bytes : bytes
             The JSON-formatted UTF-8 byte string to decode
 
         Returns
@@ -72,7 +168,10 @@ class JsonRpcModel(BaseModel):
             An instance of the model decoded from the JSON string
 
         """
-        return cls.model_validate_json(json.decode("utf-8"))
+        obj = json.loads(json_bytes.decode("utf-8"), cls=JsonRpcDecoder)
+        cls.validate_version(obj)
+
+        return cls(**obj)
 
 
 class ExecuteScope(StrEnum):
@@ -86,7 +185,8 @@ class ExecuteScope(StrEnum):
     CONTEXT = "context"
 
 
-class ExecuteParams(BaseModel):
+@dataclass
+class ExecuteParams:
     """Parameters for an RPC execute call.
 
     Attributes
@@ -106,34 +206,35 @@ class ExecuteParams(BaseModel):
 
     scope: ExecuteScope
     method: str
-    context: str | None = None
-    args: list[Any] | dict[str, Any] | None = None
-    kwargs: dict[str, Any] | None = {}
+    context: str = None
+    args: list[Any] | dict[str, Any] = None
+    kwargs: dict[str, Any] = field(default_factory=dict)
 
-    @model_validator(mode="after")
-    def check_scope_context(self) -> Self:
+    def __post_init__(self):
         """Validate the relationship between the scope and context attributes.
 
+        - Ensure that a valid scope (specified in ExecuteScope) is provided
         - If scope is ExecuteScope.CONTEXT, ensures that context is specified
         - If scope is ExecuteScope.SEQUENCE, ensures that context is not specified
 
         Raises:
-            ValueError: If the context attribute does not match the requirements for the given scope
-
-        Returns:
-            Self: Returns the instance for method chaining
+            ValidationError: If the context attribute does not match the requirements for the given
+            scope
 
         """
+        if self.scope not in ExecuteScope:
+            raise ValidationError(f"Invalid execute scope: {self.scope}")
+
         match self.scope:
             case ExecuteScope.CONTEXT:
-                if self.context is None:
-                    raise ValueError("An execute in context scope must specify a context")
+                if not self.context:
+                    raise ValidationError("An execute in context scope must specify a context")
             case ExecuteScope.SEQUENCE:
                 if self.context is not None:
-                    raise ValueError("An execute in sequence scope must not specify a context")
-        return self
+                    raise ValidationError("An execute in sequence scope must not specify a context")
 
 
+@dataclass
 class RpcRequest(JsonRpcModel):
     """RPC request message model.
 
@@ -149,9 +250,10 @@ class RpcRequest(JsonRpcModel):
     """
 
     method: str
-    params: ExecuteParams | list[Any] | dict[str, Any] | None = []
+    params: ExecuteParams | list[Any] | dict[str, Any] | None = field(default_factory=list)
 
 
+@dataclass
 class RpcResponse(JsonRpcModel):
     """RPC response message model.
 
@@ -165,89 +267,6 @@ class RpcResponse(JsonRpcModel):
     """
 
     result: Result = None  # type: ignore
-
-    @field_serializer("result")
-    def serialize_result(self, value: Any) -> Result:  # type: ignore
-        """Serialize the result field for JSON encoding.
-
-        Parameters
-        ----------
-        value : Any
-            The value to serialize, which may be a numpy ndarray or any other type
-
-        Returns
-        -------
-        Any
-            The serialized value, either as a dictionary for ndarrays or the original value
-
-        """
-
-        def _recursive_serialize(value: Any) -> Any:
-            if isinstance(value, list):
-                return [_recursive_serialize(v) for v in value]
-            elif isinstance(value, tuple):
-                return tuple([_recursive_serialize(v) for v in value])
-            elif isinstance(value, dict):
-                return {k: _recursive_serialize(v) for k, v in value.items()}
-            elif has_numpy and isinstance(value, NpArrayType):
-                return {
-                    "type": "ndarray",
-                    "dtype": str(value.dtype),
-                    "shape": list(value.shape),
-                    "data": base64.b64encode(value.tobytes()).decode("utf-8"),
-                }
-            else:
-                return value
-
-        return _recursive_serialize(value)
-
-    @field_validator("result", mode="before")
-    def validate_result(cls, value):
-        """Validate and decode the result field, handling special types like numpy ndarrays.
-
-        Parameters
-        ----------
-        value : Any
-            The value to validate and decode
-
-        Returns
-        -------
-        Any
-            The decoded value, possibly a numpy ndarray
-
-        Raises
-        ------
-        ImportError
-            If the result type is ndarray but numpy is not installed
-        TypeError
-            If an unknown type tag is encountered
-
-        """
-
-        def _recursive_validate(value: Any) -> Any:
-            if isinstance(value, list):
-                return [_recursive_validate(v) for v in value]
-            elif isinstance(value, tuple):
-                return tuple([_recursive_validate(v) for v in value])
-            elif isinstance(value, dict):
-                if (
-                    all(k in value for k in ["type", "data", "dtype", "shape"])
-                    and value["type"] == "ndarray"
-                ):
-                    if has_numpy:
-                        data = base64.b64decode(value["data"])
-                        array = np.frombuffer(data, dtype=value["dtype"])
-                        return array.reshape(value["shape"])
-                    else:
-                        raise ImportError("Result contains ndarray but numpy is not installed")
-                else:
-                    return {k: _recursive_validate(v) for k, v in value.items()}
-            else:
-                return value
-
-        return _recursive_validate(value)
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class RpcErrorCode(IntEnum):
@@ -272,7 +291,8 @@ class RpcErrorCode(IntEnum):
     AbortError = -32001
 
 
-class ErrorParams(BaseModel):
+@dataclass
+class ErrorParams:
     """Parameters for an RPC error response.
 
     Attributes
@@ -290,7 +310,18 @@ class ErrorParams(BaseModel):
     message: str
     data: Optional[Any] = None
 
+    def __post_init__(self):
+        """Validate that the code attribute is a valid RpcErrorCode.
 
+        Raises:
+            ValidationError: If the code attribute is not a valid RpcErrorCode
+
+        """
+        if self.code not in RpcErrorCode:
+            raise ValidationError(f"Invalid error code: {self.code}")
+
+
+@dataclass
 class RpcErrorResponse(JsonRpcModel):
     """RPC error response message model.
 
@@ -305,35 +336,33 @@ class RpcErrorResponse(JsonRpcModel):
 
     error: ErrorParams
 
+    def __post_init__(self):
+        """Validate that the error attribute is an instance of ErrorParams.
 
-class RpcResponseAdapter(TypeAdapter):
+        Raises:
+            ValidationError: If the error attribute is not an instance of ErrorParams
+
+        """
+        if not isinstance(self.error, ErrorParams):
+            try:
+                self.error = ErrorParams(**self.error)
+            except Exception:
+                raise ValidationError("The error attribute must be an instance of ErrorParams")
+
+
+class RpcResponseAdapter:
     """Adapter for decoding JSON-RPC response or error messages.
 
-    Determines the response type (success or error) and validates the JSON accordingly.
+    Determines the response type based on the presence of the "error" field and returns the
+    appropriate response instance.
     """
 
-    @staticmethod
-    def _get_resp_type(response: dict) -> str:
-        return "error" if "error" in response else "response"
-
-    def __init__(self):
-        """Initialize the RpcResponseAdapter with response and error type discrimination."""
-        super().__init__(
-            Annotated[
-                Union[
-                    Annotated[RpcResponse, Tag("response")],
-                    Annotated[RpcErrorResponse, Tag("error")],
-                ],
-                Discriminator(RpcResponseAdapter._get_resp_type),
-            ]
-        )
-
-    def decode(self, json: bytes) -> Union[RpcResponse, RpcErrorResponse]:
+    def decode(self, json_bytes: bytes) -> Union[RpcResponse, RpcErrorResponse]:
         """Decode a JSON-formatted UTF-8 byte string into a response or error model instance.
 
         Parameters
         ----------
-        json : bytes
+        json_bytes : bytes
             The JSON-formatted UTF-8 byte string to decode
 
         Returns
@@ -342,4 +371,10 @@ class RpcResponseAdapter(TypeAdapter):
             An instance of the response or error model decoded from the JSON string
 
         """
-        return self.validate_json(json)
+        response = json.loads(json_bytes.decode("utf-8"), cls=JsonRpcDecoder)
+        JsonRpcModel.validate_version(response)
+
+        if "error" in response:
+            return RpcErrorResponse(**response)
+        else:
+            return RpcResponse(**response)

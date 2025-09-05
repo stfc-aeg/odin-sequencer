@@ -3,12 +3,14 @@
 Tim Nicholls, STFC Detector Systems Software Group
 """
 
+import base64
 import pytest
+import numpy as np
 from odin_sequencer.rpc.protocol import (
-    ExecuteScope,
-    JsonRpcModel,
     ErrorParams,
     ExecuteParams,
+    ExecuteScope,
+    JsonRpcModel,
     RpcErrorCode,
     RpcErrorResponse,
     RpcRequest,
@@ -30,7 +32,7 @@ class TestJsonRpcModel:
 
     def test_model_version_const(self):
         """Test that attempting to create a model with a different version raises an exception."""
-        with pytest.raises(ValidationError):
+        with pytest.raises(TypeError):
             _ = JsonRpcModel(jsonrpc="1.0", id=1)
 
     def test_model_str_id(self):
@@ -54,6 +56,22 @@ class TestJsonRpcModel:
     def test_model_decodes_from_bytes(self):
         """Test that the model implements a decode method which decodes from bytes."""
         encoded = b'{"id":1}'
+        model = JsonRpcModel.decode(encoded)
+
+        assert isinstance(model, JsonRpcModel)
+        assert model.jsonrpc == "2.0"
+        assert model.id == 1
+
+    def test_model_decode_bad_version(self):
+        """Test that decoding a model with an invalid jsonrpc version raises an exception."""
+        encoded = b'{"jsonrpc":"1.0","id":1}'
+
+        with pytest.raises(ValidationError):
+            _ = JsonRpcModel.decode(encoded)
+
+    def test_model_decode_good_version(self):
+        """Test that decoding a model with a valid jsonrpc version works."""
+        encoded = b'{"jsonrpc":"2.0","id":1}'
         model = JsonRpcModel.decode(encoded)
 
         assert isinstance(model, JsonRpcModel)
@@ -114,14 +132,28 @@ class TestExecuteParams:
         with pytest.raises(ValidationError):
             _ = ExecuteParams(scope=scope, method=method, context=context)
 
-    def test_rpc_excute_bad_context(self):
-        """Test that an ExecuteParams object cannot be initialsied with an unknown context."""
+    def test_rpc_execute_no_scope(self):
+        """Test thatat an ExecuteParams object cannot be initialsied without a scope."""
+        method = "do_it"
+        context = "test"
+        with pytest.raises(TypeError):
+            _ = ExecuteParams(method=method, context=context)
+
+    def test_rpc_excute_bad_scope(self):
+        """Test that an ExecuteParams object cannot be initialsied with an unknown scope."""
         scope = "unknown"
         method = "do_it"
         context = "test"
 
         with pytest.raises(ValidationError):
             _ = ExecuteParams(scope=scope, method=method, context=context)
+
+    def test_rpc_excute_no_method(self):
+        """Test that an ExecuteParams object cannot be initialsied without a method."""
+        scope = ExecuteScope.CONTEXT
+        context = "test"
+        with pytest.raises(TypeError):
+            _ = ExecuteParams(scope=scope, context=context)
 
 
 class TestRpcRequest:
@@ -230,7 +262,7 @@ class TestErrorParams:
     def test_error_params_illegal_code(self):
         """Test that an ErrorParams object will not accept an illegal error code."""
         with pytest.raises(ValidationError):
-            _ = ErrorParams(code=1234, messsage="parse error", data="data")
+            _ = ErrorParams(code=1234, message="parse error", data="data")
 
 
 class TestRpcErrorResponse:
@@ -281,3 +313,75 @@ class TestRpcResponseAdapter:
         response = response_adapter.decode(error_bytes)
 
         assert isinstance(response, RpcErrorResponse)
+
+
+class TestRpcResponseNumpyResult:
+    """Test cases for the RpcResponse class with a numpy array result."""
+
+    def test_response_numpy_array_result(self):
+        """Test that an RpcResponse can be correctly initialised with a numpy array result."""
+        id = 2
+        result = np.array([[1, 2, 3], [4, 5, 6]])
+        response = RpcResponse(id=id, result=result)
+
+        assert response.id == id
+        assert np.array_equal(response.result, result)
+
+    def test_response_numpy_array_encode_decode(self):
+        """Test that an RpcResponse with a numpy array result encodes and decodes correctly."""
+        id = 2
+        result = np.array([[1, 2, 3], [4, 5, 6]])
+        response = RpcResponse(id=id, result=result)
+
+        encoded = response.encode()
+        decoded = RpcResponse.decode(encoded)
+
+        assert decoded.id == id
+        assert np.array_equal(decoded.result, result)
+
+    def test_response_nested_array_result(self):
+        """Test that an RpcResponse can be correctly initialised with a nested array result."""
+        id = 2
+        result = {"data": np.array([[1, 2, 3], [4, 5, 6]]), "status": "ok"}
+        response = RpcResponse(id=id, result=result)
+
+        encoded = response.encode()
+        decoded = RpcResponse.decode(encoded)
+
+        assert decoded.id == id
+        assert np.array_equal(decoded.result["status"], result["status"])
+
+    def test_response_numpy_array_decode_no_numpy(self, monkeypatch):
+        """Test that decoding a response with a numpy array result raises an exception if numpy is
+        not available.
+        """
+        import odin_sequencer.rpc.protocol
+
+        id = 2
+        result = np.array([[1, 2, 3], [4, 5, 6]])
+        response = RpcResponse(id=id, result=result)
+        encoded = response.encode()
+
+        monkeypatch.setattr(odin_sequencer.rpc.protocol, "has_numpy", False)
+        with pytest.raises(ValidationError):
+            _ = RpcResponse.decode(encoded)
+
+    def test_response_adapter_numpy_array_decode(self):
+        """Test that the RpcResponseAdapter decodes a response with a numpy array result."""
+        response_adapter = RpcResponseAdapter()
+        array = np.array([[1, 2, 3], [4, 5, 6]])
+        array_bytes = array.tobytes()
+        array_b64 = base64.b64encode(array_bytes).decode("utf-8")
+        response_bytes = (
+            '{"jsonrpc":"2.0", "id": 4, "result": {'
+            '    "type":"ndarray",'
+            f'    "dtype": "{array.dtype.str}",'
+            f'    "shape": {list(array.shape)},'
+            f'    "data": "{array_b64}"'
+            "}}"
+        ).encode("utf-8")
+
+        response = response_adapter.decode(response_bytes)
+
+        assert isinstance(response, RpcResponse)
+        assert np.array_equal(response.result, array)
