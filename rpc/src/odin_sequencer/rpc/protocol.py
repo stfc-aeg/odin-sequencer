@@ -9,25 +9,6 @@ Tim Nicholls, STFC Detector Systems Software Group
 """
 
 import base64
-from enum import IntEnum
-
-try:
-    from enum import StrEnum
-except ImportError:  # Python < 3.11
-    from enum import Enum
-
-    class StrEnum(str, Enum):
-        """String enumeration base class for Python versions < 3.11.
-
-        Provides string enumeration functionality similar to the built-in StrEnum in Python 3.11+.
-        This avoids the need for an external dependency like backports.strenum.
-        """
-
-        def __str__(self) -> str:
-            """Return the string representation of the enum member."""
-            return self.value
-
-
 import json
 from dataclasses import asdict, dataclass, field, is_dataclass
 from typing import Any, ClassVar, Optional, Union
@@ -45,6 +26,40 @@ except ImportError:
     has_numpy = False
 
 Result = Optional[Union[tuple(result_types)]]
+
+try:
+    from enum import IntEnum, StrEnum
+except ImportError:  # Python < 3.11
+    from enum import Enum, EnumMeta
+
+    class InEnumMeta(EnumMeta):
+        """Metaclass for enum classes to add __contains__ method. and allow 'in' operator use."""
+
+        def __contains__(cls, item) -> bool:
+            """Check if an item is a valid member of the class."""
+            try:
+                cls(item)
+                return True
+            except ValueError:
+                return False
+
+    class IntEnum(int, Enum, metaclass=InEnumMeta):
+        """Integer enumeration base class for Python versions < 3.11.
+
+        Provides integer enumeration functionality similar to the built-in IntEnum in Python 3.11+.
+        """
+
+        pass
+
+    class StrEnum(str, Enum, metaclass=InEnumMeta):
+        """String enumeration base class for Python versions < 3.11.
+
+        Provides string enumeration functionality similar to the built-in StrEnum in Python 3.11+.
+        """
+
+        def __str__(self) -> str:
+            """Return the string representation of the enum member."""
+            return self.value
 
 
 class ValidationError(Exception):
