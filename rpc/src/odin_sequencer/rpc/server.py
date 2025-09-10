@@ -106,6 +106,7 @@ class RpcServer:
             logging.error("Error initializing RPC server: %s", error)
 
         self.dispatcher = {
+            "ping": self.ping,
             "get_contexts": self.get_contexts,
             "execute": self.execute,
             "abort": self.abort,
@@ -221,6 +222,17 @@ class RpcServer:
         """
         message = "".join(map(str, args))
         self.log_channel.send_string(message)
+
+    @dispatched_method()
+    def ping(self):
+        """Ping the RPC server to check connectivity.
+
+        Returns:
+            True if the server is reachable.
+
+        """
+        logging.debug("Ping received")
+        return True
 
     @dispatched_method()
     def get_contexts(self):

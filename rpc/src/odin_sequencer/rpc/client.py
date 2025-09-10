@@ -65,6 +65,8 @@ class OdinSequencerClient:
         self.request_id = 0
         self.response_adapter = RpcResponseAdapter()
 
+        self.ping_sequencer(timeout=1000)
+
     def close(self):
         """Close all sockets and terminate the ZeroMQ context."""
         self.ctrl_socket.close()
@@ -81,11 +83,12 @@ class OdinSequencerClient:
         self.request_id += 1
         return self.request_id
 
-    def do_request(self, request: RpcRequest) -> Any:
+    def do_request(self, request: RpcRequest, timeout: int | None = None) -> Any:
         """Send an RPC request and wait for the response.
 
         Args:
             request: The RpcRequest object to send.
+            timeout: Optional timeout in milliseconds to wait for a response.
 
         Returns:
             The result from the RPC response if available
@@ -95,7 +98,7 @@ class OdinSequencerClient:
         """
         self.ctrl_socket.send(request.encode())
 
-        response = self.await_response()
+        response = self.await_response(timeout)
 
         if isinstance(response, RpcErrorResponse):
             error_msg = f"{response.error.message} : {response.error.data}"
@@ -107,27 +110,34 @@ class OdinSequencerClient:
 
         return response.result
 
-    def await_response(self) -> Any:
+    def await_response(self, timeout: int | None = None) -> Any:
         """Wait for and return the next response from the RPC server.
 
         Polls both the control and log sockets, handling log messages and returning
         the decoded response from the control socket when available.
+
+        Args:
+            timeout: Optional timeout in milliseconds to wait for a response.
 
         Returns:
             Any: The decoded response from the RPC server.
 
         """
         response = None
+        poll_timeout = 100
+        poll_elapsed = 0
 
         while response is None:
-            socks = dict(self.poller.poll(1000))
+            socks = dict(self.poller.poll(poll_timeout))
+            poll_elapsed += poll_timeout
             if self.ctrl_socket in socks and socks[self.ctrl_socket] == zmq.POLLIN:
                 reply = self.ctrl_socket.recv()
                 response = self.response_adapter.decode(reply)
             if self.log_socket in socks and socks[self.log_socket] == zmq.POLLIN:
                 msg = self.log_socket.recv_multipart()
                 self.handle_log_message(msg)
-
+            if timeout and poll_elapsed >= timeout:
+                raise TimeoutError("Timeout waiting for response from sequencer")
         return response
 
     def handle_log_message(self, msg: List[bytes]):
@@ -138,6 +148,25 @@ class OdinSequencerClient:
 
         """
         print(" ".join((x.decode("utf-8") for x in msg)))
+
+    def ping_sequencer(self, timeout: int | None = None) -> bool:
+        """Ping the sequencer server to check connectivity.
+
+        Returns:
+            bool: True if the server responds, False otherwise.
+
+        """
+        req = RpcRequest(method="ping", id=self._next_id())
+        try:
+            ping_response = self.do_request(req, timeout=timeout)
+            if ping_response is True:
+                print(f"Connected to odin-sequencer at {self.ctrl_endpoint}")
+            return True
+        except TimeoutError as error:
+            error_msg = (
+                f"Timeout waiting for initial response from sequencer at {self.ctrl_endpoint}"
+            )
+            raise OdinSequencerClientError(error_msg) from error
 
     def execute(self, method: str, *args, **kwargs):
         """Execute a sequence in the sequencer.
