@@ -16,7 +16,7 @@ classifiers = [
 ]
 description = "A python command sequencer to allow easy scripting in odin-control systems"
 dependencies = [
-    "odin-control @ git+https://git@github.com/odin-detector/odin-control.git@1.5.0",
+#    "odin-control @ git+https://git@github.com/odin-detector/odin-control.git@1.5.0",
     "inotify",
 ]
 dynamic = ["version"]
@@ -43,6 +43,9 @@ dev = [
 ]
 process_queue = [
     "celery",
+]
+rpc = [
+    "pyzmq"
 ]
 test = [
     "h5py",
