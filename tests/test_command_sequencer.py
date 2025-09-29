@@ -17,7 +17,8 @@ def create_command_sequencer(create_paths):
         else:
             paths = create_paths(files_or_directories)
 
-        return CommandSequencer(paths)
+        options = {"sequence_location": paths}
+        return CommandSequencer(options)
 
     return _create_command_sequencer
 
@@ -43,7 +44,7 @@ def context_object():
 def _await_execution_complete(command_sequencer):
     for _ in range(15, 0, -1):
         time.sleep(1)
-        if not command_sequencer.is_executing:
+        if not command_sequencer.manager.is_executing:
             break
 
 
@@ -326,7 +327,7 @@ def test_set_reload_to_true_when_no_modules_loaded(create_command_sequencer):
 def test_set_reload_to_true_while_sequence_is_executed(create_command_sequencer):
     file = 'basic_sequences.py'
     command_sequencer = create_command_sequencer(file)
-    command_sequencer.is_executing = True
+    command_sequencer.manager._is_executing = True
 
     with pytest.raises(
             CommandSequenceError, match='Cannot start the reloading process while a sequence ' +
@@ -389,7 +390,7 @@ def test_execute_sequence_int_list_param_non_int_values_passed_as_strings(create
 
     command_sequencer.get_log_messsages('')
     log_messages = command_sequencer.log_messages
-    assert command_sequencer.is_executing is False
+    assert command_sequencer.manager.is_executing is False
     assert len(log_messages) == 0
 
 
@@ -430,7 +431,7 @@ def test_execute_sequence_float_list_param_non_float_values_passed_as_strings(
 
     command_sequencer.get_log_messsages('')
     log_messages = command_sequencer.log_messages
-    assert command_sequencer.is_executing is False
+    assert command_sequencer.manager.is_executing is False
     assert len(log_messages) == 0
 
 
@@ -472,14 +473,14 @@ def test_execute_sequence_float_list_param_non_bool_values_passed_as_strings(
 
     command_sequencer.get_log_messsages('')
     log_messages = command_sequencer.log_messages
-    assert command_sequencer.is_executing is False
+    assert command_sequencer.manager.is_executing is False
     assert len(log_messages) == 0
 
 
 def test_execute_sequence_while_sequence_is_executed(create_command_sequencer):
     file = 'basic_sequences.py'
     command_sequencer = create_command_sequencer(file)
-    command_sequencer.is_executing = True
+    command_sequencer.manager._is_executing = True
 
     with pytest.raises(
             CommandSequenceError, match='Cannot execute command sequence while another one is ' +
@@ -499,7 +500,7 @@ def test_execute_sequence_while_reloading_process_in_progress(create_command_seq
     ):
         command_sequencer.execute_sequence('basic_read')
 
-    assert command_sequencer.is_executing is False
+    assert command_sequencer.manager.is_executing is False
 
 
 def test_execute_sequence_with_missing_sequence(create_command_sequencer):
@@ -511,7 +512,7 @@ def test_execute_sequence_with_missing_sequence(create_command_sequencer):
     ):
         command_sequencer.execute_sequence(missing_sequence)
 
-    assert command_sequencer.is_executing is False
+    assert command_sequencer.manager.is_executing is False
 
 
 def test_start_process_task(create_command_sequencer):
