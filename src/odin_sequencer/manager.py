@@ -50,9 +50,10 @@ class CommandSequenceManager:
         self.module_watcher = None
         self.module_watching = False
         self.auto_reload = False
-        self.external_logger = None
+        self.external_loggers = []
         self._abort_sequence = False
         self._progress = {}
+        self._is_executing = False
 
         self.reset_progress()
 
@@ -500,8 +501,9 @@ class CommandSequenceManager:
         :param *args: variable list of positional arguments to pass to function
         :param *kwargs: variable list of keyword arguments to pass to function
         """
-        if self.external_logger:
-            self.external_logger(*args, **kwargs)
+        if self.external_loggers:
+            for external_logger in self.external_loggers:
+                external_logger(*args, **kwargs)
         else:
             print(*args, **kwargs)
 
@@ -513,7 +515,7 @@ class CommandSequenceManager:
 
         :param logging_func: the logging function to register
         """
-        self.external_logger = logging_func
+        self.external_loggers.append(logging_func)
 
     def execute(self, sequence_name, *args, **kwargs):
         """Execute a command sequence.
@@ -540,11 +542,14 @@ class CommandSequenceManager:
                 'Missing command sequence: {}'.format(sequence_name)
             )
         try:
+            self._is_executing = True
             return getattr(self, sequence_name)(*args, **kwargs)
         except CommandSequenceError as error:
             raise error
-        except:
+        except Exception:
             raise CommandSequenceError(sys.exc_info()[1])
+        finally:
+            self._is_executing = False
 
     def add_context(self, name, obj):
         """Add an object to the manager context.
@@ -620,6 +625,16 @@ class CommandSequenceManager:
         :param abort: boolean abort flag, set to true to abort sequence
         """
         self._abort_sequence = abort
+
+    @property
+    def is_executing(self):
+        """Get the current sequence execution status.
+
+        This property method returns the current sequence execution status.
+
+        :return: boolean execution status
+        """
+        return self._is_executing
 
     @property
     def progress(self):

@@ -28,10 +28,9 @@ class CommandSequenceManagerAdapter(ApiAdapter):
         # Initialise superclass
         super(CommandSequenceManagerAdapter, self).__init__(**kwargs)
 
-        # Parse options
-        sequence_location = (self.options.get('sequence_location'))
+        # Initalise command sequencer
+        self.command_sequencer = CommandSequencer(self.options)
 
-        self.command_sequencer = CommandSequencer(sequence_location)
         logging.debug('CommandSequenceManagerAdapter loaded')
 
     @response_types('application/json', default='application/json')

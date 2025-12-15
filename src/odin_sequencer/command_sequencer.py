@@ -20,7 +20,7 @@ class CommandSequencer:
     Facilitates communcation to the command sequence manager.
     """
 
-    def __init__(self, path_or_paths=None):
+    def __init__(self, options):
         """Initialise the CommandSequencer object.
 
         This constructor initialises the CommandSequencer object, creating a command
@@ -28,17 +28,16 @@ class CommandSequencer:
         to communicate with the manager.
         """
 
-        self.initial_path_or_paths = path_or_paths
+        self.initial_path_or_paths = options.get("sequence_location")
 
         self.detect_module_modifications = False
         self.reload = False
         self.module_reload_failed = False
-        self.execute_seq_name = ''
-        self.is_executing = False
+        self.execute_seq_name = ""
         self.process_tasks = []
         self.process_group_tasks = {}
         self.log_messages = []
-        self.last_message_timestamp = ''
+        self.last_message_timestamp = ""
         self.thread = None
         self.process_monitor_thread = None
 
@@ -50,6 +49,17 @@ class CommandSequencer:
         self.manager.register_external_logger(self.log)
         self.manager_initialised = False
         self._initialise_manager()
+
+        if options.get("enable_rpc", False):
+            try:
+                from odin_sequencer.rpc.server import RpcServer
+            except ImportError:
+                logging.error(
+                    "Unable to start RPC server due to missing RPC subpackage installation"
+                )
+            else:
+                rpc_options = {k: v for k, v in options.items() if k.startswith("rpc_")}
+                self.rpc_server = RpcServer(self, self.manager, rpc_options)
 
         self.param_tree = self._build_param_tree()
 
@@ -74,28 +84,34 @@ class CommandSequencer:
             if raise_on_error:
                 raise CommandSequenceError(err_msg)
 
-
     def _build_param_tree(self):
         """Builds the parameter tree and as well as being called in the constructor, it is
         also called in set_reload so that the the parameter tree can get updated regardless
         of the outcome of the reloading process (i.e. adding information about any new sequences
         that were added in the loaded module or vice versa).
         """
-        return ParameterTree({
-            'sequence_modules': self.sequence_modules,
-            'detect_module_modifications': (
-                lambda: self.detect_module_modifications, self.set_detect_module_modifications),
-            'module_modifications_detected': (self.module_modifications_detected, None),
-            'reload': (lambda: self.reload, self.set_reload),
-            'execute': (lambda: self.execute_seq_name, self.execute_sequence),
-            'is_executing': (lambda: self.is_executing, None),
-            'execution_progress': (lambda: self.manager.progress, None),
-            'abort': (None, self.abort_sequence),
-            'is_aborting': (lambda: self.manager.abort_sequence, None),
-            'process_tasks': (lambda: self.process_tasks, None),
-            'log_messages': (lambda: self.log_messages, None),
-            'last_message_timestamp': (lambda: self.last_message_timestamp, self.get_log_messsages)
-        })
+        return ParameterTree(
+            {
+                "sequence_modules": self.sequence_modules,
+                "detect_module_modifications": (
+                    lambda: self.detect_module_modifications,
+                    self.set_detect_module_modifications,
+                ),
+                "module_modifications_detected": (self.module_modifications_detected, None),
+                "reload": (lambda: self.reload, self.set_reload),
+                "execute": (lambda: self.execute_seq_name, self.execute_sequence),
+                "is_executing": (lambda: self.manager.is_executing, None),
+                "execution_progress": (lambda: self.manager.progress, None),
+                "abort": (None, self.abort_sequence),
+                "is_aborting": (lambda: self.manager.abort_sequence, None),
+                "process_tasks": (lambda: self.process_tasks, None),
+                "log_messages": (lambda: self.log_messages, None),
+                "last_message_timestamp": (
+                    lambda: self.last_message_timestamp,
+                    self.get_log_messsages,
+                ),
+            }
+        )
 
     def get(self, path):
         """Get parameters from the underlying parameter tree.
@@ -140,14 +156,18 @@ class CommandSequencer:
             try:
                 self.manager.enable_module_watching()
             except CommandSequenceError as error:
-                raise CommandSequenceError('A problem occurred while trying to start the ' +
-                                           'Detect Modifications process: {}'.format(error))
+                raise CommandSequenceError(
+                    "A problem occurred while trying to start the "
+                    + "Detect Modifications process: {}".format(error)
+                )
         else:
             try:
                 self.manager.disable_module_watching()
             except CommandSequenceError as error:
-                raise CommandSequenceError('A problem occurred while trying to stop the ' +
-                                           'Detect Modifications process: {}'.format(error))
+                raise CommandSequenceError(
+                    "A problem occurred while trying to stop the "
+                    + "Detect Modifications process: {}".format(error)
+                )
 
         self.detect_module_modifications = detect_module_modifications
 
@@ -181,14 +201,16 @@ class CommandSequencer:
             self.param_tree = self._build_param_tree()
             return
 
-        sequence_modules = self.param_tree.get('sequence_modules')['sequence_modules']
+        sequence_modules = self.param_tree.get("sequence_modules")["sequence_modules"]
         if not sequence_modules:
             raise CommandSequenceError(
-                'Cannot start the reloading process as there are no sequence modules loaded')
+                "Cannot start the reloading process as there are no sequence modules loaded"
+            )
 
-        if self.is_executing:
+        if self.manager.is_executing:
             raise CommandSequenceError(
-                'Cannot start the reloading process while a sequence is being executed')
+                "Cannot start the reloading process while a sequence is being executed"
+            )
 
         if reload:
             try:
@@ -202,7 +224,8 @@ class CommandSequencer:
             except CommandSequenceError as error:
                 self.module_reload_failed = True
                 raise CommandSequenceError(
-                    'A problem occurred during the reloading process: {}'.format(error))
+                    "A problem occurred during the reloading process: {}".format(error)
+                )
             finally:
                 self.param_tree = self._build_param_tree()
 
@@ -246,29 +269,31 @@ class CommandSequencer:
         the method is called while the reloading process is in progress or a sequence is being
         executed.
         """
-        if self.is_executing:
+        if self.manager.is_executing:
             raise CommandSequenceError(
-                'Cannot execute command sequence while another one is being executed')
+                "Cannot execute command sequence while another one is being executed"
+            )
 
         if self.reload:
             raise CommandSequenceError(
-                'Cannot execute command sequence while the reloading process is in progress')
+                "Cannot execute command sequence while the reloading process is in progress"
+            )
 
-        sequence_modules = self.param_tree.get('sequence_modules')['sequence_modules']
+        sequence_modules = self.param_tree.get("sequence_modules")["sequence_modules"]
         if not any(seq_name in seq_module for seq_module in sequence_modules.values()):
-            raise CommandSequenceError('Missing command sequence: {}'.format(seq_name))
+            raise CommandSequenceError("Missing command sequence: {}".format(seq_name))
 
         (seq_mod, seq) = next(
-            ((mod_name, seq_module[seq_name])
-                for (mod_name, seq_module) in sequence_modules.items() if
-                    seq_name in seq_module
+            (
+                (mod_name, seq_module[seq_name])
+                for (mod_name, seq_module) in sequence_modules.items()
+                if seq_name in seq_module
             ),
-            None
+            None,
         )
 
         kwargs = self._get_seq_param_values(seq)
         self.manager.reset_progress()
-        self.is_executing = True
         self.execute_seq_name = seq_mod + "/" + seq_name
         self.thread = threading.Thread(target=self._execute, args=(seq_name,), kwargs=kwargs)
         self.thread.start()
@@ -277,21 +302,23 @@ class CommandSequencer:
         try:
             self.manager.execute(seq_name, **kwargs)
         except CommandSequenceError as error:
-            self.manager.log_message('<b style="color:red">Execution error</b>: {}: {}'.format(seq_name, error))
+            self.manager.log_message(
+                '<b style="color:red">Execution error</b>: {}: {}'.format(seq_name, error)
+            )
             logging.error("Sequence execution error: {}: {}".format(seq_name, error))
         finally:
-            self.is_executing = False
             self.execute_seq_name = ""
             if self.manager.abort_sequence:
                 self.manager.log_message(
-                    '<span style="color:orange">Execution of sequence "{}" aborted</span>'.format(seq_name)
+                    '<span style="color:orange">Execution of sequence "{}" aborted</span>'.format(
+                        seq_name
+                    )
                 )
                 logging.info("Execution of sequence {} aborted".format(seq_name))
                 self.manager.abort_sequence = False
 
     def abort_sequence(self, abort):
-
-        if abort and not self.is_executing:
+        if abort and not self.manager.is_executing:
             raise CommandSequenceError("Cannot abort when no sequence is executing")
 
         logging.debug("Aborting sequence with value {}".format(abort))
@@ -306,7 +333,9 @@ class CommandSequencer:
         try:
             self.process_tasks.remove(task_uuid)
         except ValueError as error:
-            raise CommandSequenceError('Empty process task list while trying to remove {}'.format(task_uuid))
+            raise CommandSequenceError(
+                "Empty process task list while trying to remove {}".format(task_uuid)
+            )
 
     def start_process_group_task(self, task_uuid, group_uuid):
         """
@@ -333,15 +362,19 @@ class CommandSequencer:
                 self.process_group_tasks.pop(group_uuid)
                 return True
         except ValueError as error:
-            raise CommandSequenceError('Empty process task list while trying to remove group {} and task {}'.format(group_uuid, task_uuid))
-    
+            raise CommandSequenceError(
+                "Empty process task list while trying to remove group {} and task {}".format(
+                    group_uuid, task_uuid
+                )
+            )
+
     def log(self, *args, **kwargs):
         """This method is register as an external logger with the manager. Doing this results
         in all the print messages in the loaded sequences to be passed to this method. The method
         intercepts each print message, adds a timestamp to it and puts it onto the deque.
         """
         timestamp = datetime.now()
-        message = ''
+        message = ""
 
         for arg in args:
             message += str(arg)
@@ -356,8 +389,9 @@ class CommandSequencer:
         """
         logs = []
         if last_message_timestamp:
-            last_message_timestamp = datetime.strptime(last_message_timestamp,
-                                                       "%Y-%m-%d %H:%M:%S.%f")
+            last_message_timestamp = datetime.strptime(
+                last_message_timestamp, "%Y-%m-%d %H:%M:%S.%f"
+            )
 
             # Casting the deque to a list so that messages are not popped
             for index, (timestamp, log_message) in enumerate(list(self.log_messages_deque)):
@@ -378,53 +412,62 @@ class CommandSequencer:
         """
         kwargs = {}
         for param_name in seq:
-            param_val = seq[param_name]['value']
-            param_type = seq[param_name]['type']
+            param_val = seq[param_name]["value"]
+            param_type = seq[param_name]["type"]
 
-            if param_type.startswith('list'):
-                list_type = param_type.split('-')[1]
+            if param_type.startswith("list"):
+                list_type = param_type.split("-")[1]
 
-                if list_type != 'str':
+                if list_type != "str":
                     try:
                         param_val = self._cast_list(list_type, param_val)
                     except ValueError as error:
-                        raise CommandSequenceError("Invalid list: {} - {}".format(
-                            param_name, error))
+                        raise CommandSequenceError(
+                            "Invalid list: {} - {}".format(param_name, error)
+                        )
 
-            kwargs.update({
-                param_name: param_val
-            })
+            kwargs.update({param_name: param_val})
 
         return kwargs
 
     def _cast_list(self, list_type, list_val):
         """This method decides the type of list casting that is required."""
-        if list_type == 'bool':
+        if list_type == "bool":
             list_val = map(self._val_to_bool, list_val)
-        elif list_type == 'int':
+        elif list_type == "int":
             list_val = map(self._val_to_int, list_val)
-        elif list_type == 'float':
+        elif list_type == "float":
             list_val = map(self._val_to_float, list_val)
 
         return list(list_val)
-    
+
     def _add_context(self, name, obj):
         """This method adds an object to the manager context."""
         self.manager.add_context(name, obj)
 
     def _start_process_monitor(self, process_monitor):
         """Start thread in background for the process monitor."""
-        self.process_monitor_thread = threading.Thread(target=process_monitor, args=(self.log, self.start_process_task, self.finish_process_task, self.start_process_group_task, self.finish_process_group_task), daemon=True)
-        self.process_monitor_thread.start()    
+        self.process_monitor_thread = threading.Thread(
+            target=process_monitor,
+            args=(
+                self.log,
+                self.start_process_task,
+                self.finish_process_task,
+                self.start_process_group_task,
+                self.finish_process_group_task,
+            ),
+            daemon=True,
+        )
+        self.process_monitor_thread.start()
 
     @staticmethod
     def _val_to_bool(val):
         if type(val != str):
             val = str(val)
 
-        if val.lower().strip() == 'true':
+        if val.lower().strip() == "true":
             return True
-        elif val.lower().strip() == 'false':
+        elif val.lower().strip() == "false":
             return False
         else:
             raise ValueError("'{}' is not a bool value".format(val))
