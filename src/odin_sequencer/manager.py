@@ -629,7 +629,7 @@ class CommandSequenceManager:
 
         :param name: name of the missing attribute
         """
-        if self.auto_reload and self.module_modifications_detected:
+        if self.auto_reload and self.module_modifications_detected():
             modified_module_paths = self.get_modified_module_paths()
             if modified_module_paths:
                 self.reload(modified_module_paths)
