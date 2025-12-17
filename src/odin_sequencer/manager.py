@@ -50,7 +50,11 @@ class CommandSequenceManager:
         self.module_watcher = None
         self.module_watching = False
         self.auto_reload = False
+        self._start_hooks_called = False
+        self.external_start_hooks = []
         self.external_loggers = []
+        self._end_hooks_called = False
+        self.external_end_hooks = []
         self._abort_sequence = False
         self._progress = {}
         self._is_executing = False
@@ -517,6 +521,27 @@ class CommandSequenceManager:
         """
         self.external_loggers.append(logging_func)
 
+    def register_external_start_hook(self, execution_func):
+        """Register an external execution function.
+
+        This method allows an external execution function to be registered so that the execute
+        function can call it before beginning the sequence.
+        Any args, kwargs, and function name will be passed to the hook function.
+
+        :param execution_func: the execution function to register
+        """
+        self.external_start_hooks.append(execution_func)
+
+    def register_external_end_hook(self, end_func):
+        """Register an external end function.
+
+        This method allows an external excecution function to be registered so that the execute
+        function can call it once the sequence is complete, in the finally clause.
+
+        :param end_func: the end function to register
+        """
+        self.external_end_hooks.append(end_func)
+
     def execute(self, sequence_name, *args, **kwargs):
         """Execute a command sequence.
 
@@ -532,7 +557,7 @@ class CommandSequenceManager:
         :param *kwargs: variable list of keyword arguments to pass to function
         :return: return value of called function
         """
-        if self.auto_reload and self.module_modifications_detected:
+        if self.auto_reload and self.module_modifications_detected():
             modified_module_paths = self.get_modified_module_paths()
             if modified_module_paths:
                 self.reload(modified_module_paths)
@@ -541,15 +566,27 @@ class CommandSequenceManager:
             raise  CommandSequenceError(
                 'Missing command sequence: {}'.format(sequence_name)
             )
+        # At new execution, end hooks should be reset
+        self._end_hooks_called = False
+
+        if self.external_start_hooks and not self._start_hooks_called:
+            self._start_hooks_called = True
+            for hook in self.external_start_hooks:
+                hook(sequence_name, args, kwargs)
+
         try:
-            self._is_executing = True
             return getattr(self, sequence_name)(*args, **kwargs)
         except CommandSequenceError as error:
             raise error
-        except Exception:
+        except:
             raise CommandSequenceError(sys.exc_info()[1])
         finally:
             self._is_executing = False
+            self._start_hooks_called = False
+            if self.external_end_hooks and not self._end_hooks_called:
+                self._end_hooks_called = True
+                for hook in self.external_end_hooks:
+                    hook(sequence_name, args, kwargs)
 
     def add_context(self, name, obj):
         """Add an object to the manager context.
