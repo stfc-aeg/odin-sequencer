@@ -1,6 +1,6 @@
 import Accordion from 'react-bootstrap/Accordion';
-import ModuleList from '../ModuleList'
-import SequenceButtons from '../SequenceButtons'
+import ModuleList from './ModuleList'
+import SequenceButtons from './SequenceButtons'
 import { Col, Row, Card } from 'react-bootstrap';
 import { TitleCard } from 'odin-react';
 

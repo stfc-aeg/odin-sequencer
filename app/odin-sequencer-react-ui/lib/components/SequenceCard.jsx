@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
 import { Card, Button, Modal, Col, Row } from 'react-bootstrap';
 import { TitleCard } from 'odin-react';
-import ModalParams from '../ModalParams'
-import { handleAlerts } from '../alertUtils';
-import { useMessageLog, awaitExecutionComplete, awaitProcessExecutionComplete } from '../useMessageLog';
+import ModalParams from './ModalParams'
+import { handleAlerts } from './alertUtils';
+import { useMessageLog, awaitExecutionComplete, awaitProcessExecutionComplete } from './useMessageLog';
 
 /* Constructs a card for each sequence within the module */
 

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { useMessageLog } from '../useMessageLog';
-import { handleAlerts } from '../alertUtils';
-import { awaitExecutionComplete, awaitProcessExecutionComplete } from '../useMessageLog';
+import { useMessageLog } from './useMessageLog';
+import { handleAlerts } from './alertUtils';
+import { awaitExecutionComplete, awaitProcessExecutionComplete } from './useMessageLog';
 import { Button, Form, Stack } from 'react-bootstrap';
 
 

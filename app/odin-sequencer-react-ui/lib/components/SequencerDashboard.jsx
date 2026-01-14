@@ -1,9 +1,9 @@
 import { useRef, useEffect, useState } from 'react';
 import { Row, Col } from 'react-bootstrap';
-import ExecutionPanel from '../ExecutionPanel';
-import SequenceTable from '../SequenceTable';
+import ExecutionPanel from './ExecutionPanel';
+import SequenceTable from './SequenceTable';
 
-import MessageLog from '../MessageLog';
+import MessageLog from './MessageLog';
 
 function BasicExample({ sequencer_endpoint }) {
   const [sequenceModules, setSequenceModules] = useState({});

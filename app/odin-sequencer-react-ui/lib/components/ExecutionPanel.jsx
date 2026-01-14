@@ -1,5 +1,5 @@
 import { useRef, useImperativeHandle, forwardRef } from 'react';
-import { handleAlerts } from '../alertUtils';
+import { handleAlerts } from './alertUtils';
 
 const ExecutionPanel = forwardRef(({ abortDisabled, setAbortDisabled, sequencer_endpoint }, ref) => {
     const spinnerRef = useRef(null);

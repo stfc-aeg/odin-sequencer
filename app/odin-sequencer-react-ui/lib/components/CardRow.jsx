@@ -1,4 +1,4 @@
-import SequenceCard from "../SequenceCard";
+import SequenceCard from "./SequenceCard";
 import { Col } from "react-bootstrap";
 
 /* Creates a row within the accordion, for each sequence to go into. */

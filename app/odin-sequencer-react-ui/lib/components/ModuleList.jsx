@@ -1,4 +1,4 @@
-import SequenceModule from '../SequenceModule'
+import SequenceModule from './SequenceModule'
 import Accordion from 'react-bootstrap/Accordion';
 
 /* Initialises a SequenceModule component for each module found in the object. */
@@ -15,9 +15,9 @@ const ModuleList = ({sequence_modules, executionPanelRef, setAbortDisabled, sequ
     )
 
     return (
-        <Accordion alwaysOpen>
-          {listHeaders}
-        </Accordion>
+      <Accordion alwaysOpen>
+        {listHeaders}
+      </Accordion>
       );
 }
 
