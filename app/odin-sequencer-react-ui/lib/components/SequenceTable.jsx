@@ -1,7 +1,7 @@
 import Accordion from 'react-bootstrap/Accordion';
 import ModuleList from './ModuleList'
 import SequenceButtons from './SequenceButtons'
-import { Col, Row, Card } from 'react-bootstrap';
+import { Col, Row } from 'react-bootstrap';
 import { TitleCard } from 'odin-react';
 
 const SequenceTable = ({ fetchModules, sequenceModules, executionPanelRef, setAbortDisabled, sequencer_endpoint }) => {

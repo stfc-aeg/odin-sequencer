@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Card, Button, Modal, Col, Row } from 'react-bootstrap';
+import { Button, Modal, Col, Row } from 'react-bootstrap';
 import { TitleCard } from 'odin-react';
 import ModalParams from './ModalParams'
 import { handleAlerts } from './alertUtils';
