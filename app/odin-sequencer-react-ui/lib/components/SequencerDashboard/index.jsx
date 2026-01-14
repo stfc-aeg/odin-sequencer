@@ -1,11 +1,9 @@
 import { useRef, useEffect, useState } from 'react';
+import { Row, Col } from 'react-bootstrap';
 import ExecutionPanel from '../ExecutionPanel';
 import SequenceTable from '../SequenceTable';
 
 import MessageLog from '../MessageLog';
-
-import './styles.css';
-
 
 function BasicExample({ sequencer_endpoint }) {
   const [sequenceModules, setSequenceModules] = useState({});
@@ -30,18 +28,30 @@ function BasicExample({ sequencer_endpoint }) {
   }, []);
 
   return (
-    <>
-      <div className="alert-box" id="alert-container"></div>
-      <ExecutionPanel ref={executionPanelRef} abortDisabled={abortDisabled} setAbortDisabled={setAbortDisabled} sequencer_endpoint={sequencer_endpoint}></ExecutionPanel>
-      <div className="flex-container">
-        <div className="left">
-          <SequenceTable fetchModules={fetchModules} sequenceModules={sequenceModules} executionPanelRef={executionPanelRef} setAbortDisabled={setAbortDisabled} sequencer_endpoint={sequencer_endpoint}></SequenceTable>
-        </div>
-        <div className="right">
-          <MessageLog></MessageLog>
-        </div>
-      </div>
-    </>
+    <Col>
+      <Row>
+        <ExecutionPanel
+          ref={executionPanelRef}
+          abortDisabled={abortDisabled}
+          setAbortDisabled={setAbortDisabled}
+          sequencer_endpoint={sequencer_endpoint}
+        />
+      </Row>
+      <Row>
+        <Col xs={12} lg={6}>
+          <SequenceTable
+            fetchModules={fetchModules}
+            sequenceModules={sequenceModules}
+            executionPanelRef={executionPanelRef}
+            setAbortDisabled={setAbortDisabled}
+            sequencer_endpoint={sequencer_endpoint}
+          />
+        </Col>
+        <Col xs={12} lg={6}>
+          <MessageLog/>
+        </Col>
+      </Row>
+    </Col>
   );
 }
 

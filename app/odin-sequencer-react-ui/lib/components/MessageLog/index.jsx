@@ -1,16 +1,27 @@
-import './styles.css';
+import { TitleCard } from 'odin-react';
+import { Form, Col } from 'react-bootstrap';
 
 const MessageLog = () => {
-    return (
-        <>
-            <div className="ui-card">
-                <div className="ui-card-header">Log Messages</div>
-                <div className="ui-card-body message-box">
-                    <pre className="pre-scrollable" id="log-messages"></pre>
-                </div>
-            </div>
-        </>
-    )
+  return (
+    <TitleCard title="Log Messages">
+    <Col>
+      <Form.Control
+        as="textarea"
+        readOnly
+        id="log-messages"
+        style={{
+          height:'600px',
+          overflowY:'auto',
+          resize:'none',
+          whiteSpace:'pre-wrap',
+          fontFamily:'monospace',
+          backgroundColor:'#f7f7f7',
+          border:'1px solid #ccc'
+        }}
+      />
+      </Col>
+    </TitleCard>
+  )
 }
 
 export default MessageLog

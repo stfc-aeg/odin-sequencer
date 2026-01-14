@@ -1,12 +1,9 @@
-import Card from 'react-bootstrap/Card'
-import Button from 'react-bootstrap/Button'
 import { useState, useRef, useEffect } from 'react'
-import { Modal } from 'react-bootstrap'
+import { Card, Button, Modal, Col, Row } from 'react-bootstrap';
+import { TitleCard } from 'odin-react';
 import ModalParams from '../ModalParams'
 import { handleAlerts } from '../alertUtils';
 import { useMessageLog, awaitExecutionComplete, awaitProcessExecutionComplete } from '../useMessageLog';
-
-import './styles.css';
 
 /* Constructs a card for each sequence within the module */
 
@@ -98,16 +95,27 @@ const SequenceCard = ({ sequence, header, row_title, executionPanelRef, setAbort
   };
 
   return (
-    <>
-      <Card>
-        <Card.Body>
-          <Card.Title>{readableHeader}</Card.Title>
-          <Card.Text>
-            <Button className="btn btn-info" onClick={handleOpenModal}>Parameters</Button>
-            <Button className="btn btn-success btn-width execute-btn" onClick={handleExecute}>Execute</Button>
-          </Card.Text>
-        </Card.Body>
-      </Card>
+    <TitleCard title={readableHeader}>
+      <Row>
+        <Col>
+          <Button
+            variant="secondary"
+            onClick={handleOpenModal}
+            style={{width:'100%'}}
+          >
+            Parameters
+          </Button>
+        </Col>
+        <Col>
+          <Button
+            variant="success"
+            onClick={handleExecute}
+            style={{width:'100%'}}
+          >
+            Execute
+          </Button>
+        </Col>
+      </Row>
 
       <Modal show={showModal} onHide={handleCloseModal}>
         <Modal.Header closeButton>
@@ -125,7 +133,7 @@ const SequenceCard = ({ sequence, header, row_title, executionPanelRef, setAbort
           </Button>
         </Modal.Footer>
       </Modal>
-    </>
+    </TitleCard>
   );
 };
 

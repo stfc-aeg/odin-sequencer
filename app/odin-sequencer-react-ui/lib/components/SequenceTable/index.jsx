@@ -1,25 +1,29 @@
 import Accordion from 'react-bootstrap/Accordion';
 import ModuleList from '../ModuleList'
 import SequenceButtons from '../SequenceButtons'
-import { Col } from 'react-bootstrap';
-
-import './styles.css';
+import { Col, Row, Card } from 'react-bootstrap';
+import { TitleCard } from 'odin-react';
 
 const SequenceTable = ({ fetchModules, sequenceModules, executionPanelRef, setAbortDisabled, sequencer_endpoint }) => {
-    return (
-        <>
-            <div className="ui-card">
-                <div className="ui-card-header d-flex align-items-center">Sequences <SequenceButtons reloadModules={fetchModules} executionPanelRef={executionPanelRef} setAbortDisabled={setAbortDisabled} sequencer_endpoint={sequencer_endpoint}></SequenceButtons></div>
-                <div className="ui-card-body message-box">
-                    <Col sm={7}>
-                    <Accordion>
-                        <ModuleList sequence_modules={sequenceModules} executionPanelRef={executionPanelRef} setAbortDisabled={setAbortDisabled} sequencer_endpoint={sequencer_endpoint}></ModuleList>
-                    </Accordion>
-                    </Col>
-                </div>
-            </div>
-        </>
-    )
+  return (
+    <TitleCard title={
+      <Row>
+        <Col xs={3} className="d-flex align-items-center" style={{fonstSize:'1.3rem'}}>Sequences</Col>
+        <Col xs={9}><SequenceButtons reloadModules={fetchModules} executionPanelRef={executionPanelRef} setAbortDisabled={setAbortDisabled} sequencer_endpoint={sequencer_endpoint}/></Col>
+      </Row>
+    }>
+      <Col>
+        <Accordion>
+          <ModuleList
+            sequence_modules={sequenceModules}
+            executionPanelRef={executionPanelRef}
+            setAbortDisabled={setAbortDisabled}
+            sequencer_endpoint={sequencer_endpoint}
+          />
+        </Accordion>
+      </Col>
+    </TitleCard>
+  )
 }
 
 export default SequenceTable

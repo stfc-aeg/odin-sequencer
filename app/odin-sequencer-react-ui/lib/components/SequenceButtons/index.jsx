@@ -2,8 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useMessageLog } from '../useMessageLog';
 import { handleAlerts } from '../alertUtils';
 import { awaitExecutionComplete, awaitProcessExecutionComplete } from '../useMessageLog';
+import { Button, Form, Stack } from 'react-bootstrap';
 
-import './styles.css';
 
 const SequenceButtons = ({ reloadModules, executionPanelRef, setAbortDisabled, sequencer_endpoint }) => {
     const { displayLogMessages } = useMessageLog({ sequencer_endpoint });
@@ -129,21 +129,38 @@ const SequenceButtons = ({ reloadModules, executionPanelRef, setAbortDisabled, s
     };
 
     return (
-        <>
-            <div className="button-row">
-                <div className="form-switch d-flex align-items-center mb-0">
-                    <input
-                        className="form-check-input"
-                        type="checkbox"
-                        id="detect-module-changes-toggle"
-                        checked={detectChanges}
-                        onChange={e => toggleDetectChanges(e.target.checked)}
-                    />
-                    <label className="form-check-label" htmlFor="detect-module-changes-toggle"><span style={{ marginLeft: '8px', fontWeight: 500, fontSize: '1rem' }}>Detect&nbsp;Changes</span></label>
-                </div>
-                <button className="btn btn-primary" onClick={handleReloadClick}>Reload</button>
-            </div>
-        </>
+      <Form>
+        <Stack direction="horizontal" gap={3} className="justify-content-end">
+          <Form.Check
+            type="switch"
+            id="detect-module-changes-toggle"
+            checked={detectChanges}
+            onChange={(e) => toggleDetectChanges(e.target.checked)}
+            label="Detect Changes"
+          />
+          <Button
+            variant="primary"
+            onClick={handleReloadClick}
+          >
+            Reload
+          </Button>
+        </Stack>
+      </Form>
+        // <>
+        //     <div className="button-row">
+        //         <div className="form-switch d-flex align-items-center mb-0">
+        //             <input
+        //                 className="form-check-input"
+        //                 type="checkbox"
+        //                 id="detect-module-changes-toggle"
+        //                 checked={detectChanges}
+        //                 onChange={e => toggleDetectChanges(e.target.checked)}
+        //             />
+        //             <label className="form-check-label" htmlFor="detect-module-changes-toggle"><span style={{ marginLeft: '8px', fontWeight: 500, fontSize: '1rem' }}>Detect&nbsp;Changes</span></label>
+        //         </div>
+        //         <button className="btn btn-primary" onClick={handleReloadClick}>Reload</button>
+        //     </div>
+        // </>
     );
 };
 
