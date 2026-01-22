@@ -1,27 +1,25 @@
 import { Row , Col, Form } from "react-bootstrap"
+import { WithEndpoint } from "odin-react";
 
 /* Constructing the labels and input boxes for the parameters inside the modal. */
+const EndpointFormControl = WithEndpoint(Form.Control);
 
-const ModalParams = ({sequence, inputRefs}) => {
+function ModalParams ({endpoint, sequence, sequenceName, sequenceFile}) {
   return (
     <Form>
       {Object.entries(sequence).map(([paramKey, param]) => {
         const paramLabel = `${paramKey.replaceAll(' ', '_')}-${param.type}`;
         const paramName = `${paramKey.replaceAll(' ', '_')} (${param.type})`;
-        const paramValue = param.value !== param.default ? param.value : param.default;
-        const inputRef = (el) => {
-          if (el) inputRefs.current.set(paramLabel, el);
-        };
+
         return (
           <Form.Group as={Row} className="mb-2" key={paramLabel}>
             <Form.Label column sm={5}>
               {paramName}
             </Form.Label>
             <Col sm={7}>
-              <Form.Control
-                type="text"
-                defaultValue={paramValue}
-                ref={inputRef}
+              <EndpointFormControl
+                endpoint={endpoint}
+                fullpath={`sequence_modules/${sequenceFile}/${sequenceName}/${paramKey}/value`}
               />
             </Col>
           </Form.Group>

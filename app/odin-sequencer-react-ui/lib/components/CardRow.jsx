@@ -9,9 +9,9 @@ const CardRow = ({sequences, row_title, executionPanelRef, setAbortDisabled, seq
     <Col xs={4} className="mb-2">
       <SequenceCard
         key={sequenceKey}
-        header={sequenceKey}
+        sequenceName={sequenceKey}
         sequence={sequence}
-        row_title={row_title}
+        sequenceFile={row_title}
         executionPanelRef={executionPanelRef}
         setAbortDisabled={setAbortDisabled}
         sequencer_endpoint={sequencer_endpoint}
