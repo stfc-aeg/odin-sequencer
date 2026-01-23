@@ -3,7 +3,7 @@ import Accordion from 'react-bootstrap/Accordion';
 
 /* Initialises a SequenceModule component for each module found in the object. */
 
-const ModuleList = ({endpoint, executionPanelRef, setAbortDisabled}) => {
+const ModuleList = ({ endpoint }) => {
 
     const sequenceModules = endpoint.data?.sequence_modules ?? {};
     const sortedModules = Object.entries(sequenceModules).sort(
@@ -18,8 +18,6 @@ const ModuleList = ({endpoint, executionPanelRef, setAbortDisabled}) => {
               key={moduleName}
               moduleName={moduleName}
               sequences={sequences}
-              executionPanelRef={executionPanelRef}
-              setAbortDisabled={setAbortDisabled}
             />
           ))
         }

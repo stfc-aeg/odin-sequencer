@@ -4,7 +4,7 @@ import SequenceButtons from './SequenceButtons'
 import { Col, Row } from 'react-bootstrap';
 import { TitleCard } from 'odin-react';
 
-const SequenceTable = ({ endpoint, executionPanelRef, setAbortDisabled }) => {
+const SequenceTable = ({ endpoint }) => {
   return (
     <TitleCard title={
       <Row>
@@ -16,8 +16,6 @@ const SequenceTable = ({ endpoint, executionPanelRef, setAbortDisabled }) => {
         <Accordion>
           <ModuleList
             endpoint={endpoint}
-            executionPanelRef={executionPanelRef}
-            setAbortDisabled={setAbortDisabled}
           />
         </Accordion>
       </Col>

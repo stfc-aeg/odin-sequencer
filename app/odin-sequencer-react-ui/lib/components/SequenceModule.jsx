@@ -4,7 +4,7 @@ import { Row } from 'react-bootstrap'
 
 /* Constructs Accordion layer for each sequence module, then intialises the CardRow to display sequences. */
 
-const SequenceModule = ({endpoint, moduleName, sequences, executionPanelRef, setAbortDisabled}) => {
+const SequenceModule = ({ endpoint, moduleName, sequences }) => {
   return (
     <Accordion.Item eventKey={moduleName}>
       <Accordion.Header>{moduleName}</Accordion.Header>
@@ -14,8 +14,6 @@ const SequenceModule = ({endpoint, moduleName, sequences, executionPanelRef, set
             endpoint={endpoint}
             sequences={sequences}
             moduleName={moduleName}
-            executionPanelRef={executionPanelRef}
-            setAbortDisabled={setAbortDisabled}
           />
         </Row>
       </Accordion.Body>

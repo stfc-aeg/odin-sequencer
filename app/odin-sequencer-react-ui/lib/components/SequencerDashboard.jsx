@@ -6,17 +6,11 @@ import SequenceTable from './SequenceTable';
 import MessageLog from './MessageLog';
 
 function BasicExample({ endpoint }) {
-  const [abortDisabled, setAbortDisabled] = useState(true);
-
-  const executionPanelRef = useRef(null);
 
   return (
     <Col>
       <Row>
         <ExecutionPanel
-          ref={executionPanelRef}
-          abortDisabled={abortDisabled}
-          setAbortDisabled={setAbortDisabled}
           endpoint={endpoint}
         />
       </Row>
@@ -24,8 +18,6 @@ function BasicExample({ endpoint }) {
         <Col xs={12} lg={6}>
           <SequenceTable
             endpoint={endpoint}
-            executionPanelRef={executionPanelRef}
-            setAbortDisabled={setAbortDisabled}
           />
         </Col>
         <Col xs={12} lg={6}>

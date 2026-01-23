@@ -9,21 +9,13 @@ import { useMessageLog, awaitExecutionComplete, awaitProcessExecutionComplete } 
 
 const EndpointButton = WithEndpoint(Button);
 
-const SequenceCard = ({ endpoint, moduleName, sequenceName, sequenceConfig, executionPanelRef, setAbortDisabled,  }) => {
+const SequenceCard = ({ endpoint, moduleName, sequenceName, sequenceConfig }) => {
   const { displayLogMessages } = useMessageLog({ endpoint });
   const [showModal, setShowModal] = useState(false);
   const readableSeqName = String(sequenceName).replaceAll("_", " ");
 
   const handleOpenModal = () => setShowModal(true);
   const handleCloseModal = () => setShowModal(false);
-
-  // useEffect to run displayExecution when execution starts
-  useEffect(() => {
-    if (endpoint.data?.is_executing && executionPanelRef.current) {
-      executionPanelRef.current?.displayExecution?.(sequenceName);
-    }
-  }, [endpoint.data?.is_executing]); // Runs when endpoint indicates sequence is executing
-
 
   return (
     <TitleCard title={readableSeqName}>
