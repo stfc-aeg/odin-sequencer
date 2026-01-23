@@ -3,22 +3,24 @@ import { Col } from "react-bootstrap";
 
 /* Creates a row within the accordion, for each sequence to go into. */
 
-const CardRow = ({sequences, row_title, executionPanelRef, setAbortDisabled, sequencer_endpoint}) => {
-  sequences = JSON.parse(sequences)
-  const listItems = (Object.entries(sequences)).flatMap(([sequenceKey, sequence]) =>
-    <Col xs={4} className="mb-2">
+const CardRow = ({endpoint, sequences, moduleName, executionPanelRef, setAbortDisabled}) => {
+
+  const sequenceEntries = Object.entries(sequences);
+
+  const cards = sequenceEntries.map(([sequenceName, sequenceConfig]) => (
+    <Col key={sequenceName} xs={4} className="mb-2">
       <SequenceCard
-        key={sequenceKey}
-        sequenceName={sequenceKey}
-        sequence={sequence}
-        sequenceFile={row_title}
+        endpoint={endpoint}
+        moduleName={moduleName}
+        sequenceName={sequenceName}
+        sequenceConfig={sequenceConfig}
         executionPanelRef={executionPanelRef}
         setAbortDisabled={setAbortDisabled}
-        sequencer_endpoint={sequencer_endpoint}
       />
     </Col>
-  );
-  return (listItems)
+  ));  
+
+  return (cards)
 };
 
 export default CardRow;

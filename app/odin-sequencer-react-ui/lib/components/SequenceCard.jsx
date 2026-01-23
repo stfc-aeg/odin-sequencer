@@ -9,8 +9,8 @@ import { useMessageLog, awaitExecutionComplete, awaitProcessExecutionComplete } 
 
 const EndpointButton = WithEndpoint(Button);
 
-const SequenceCard = ({ sequence, sequenceName, sequenceFile, executionPanelRef, setAbortDisabled, sequencer_endpoint }) => {
-  const { displayLogMessages } = useMessageLog({ sequencer_endpoint });
+const SequenceCard = ({ endpoint, moduleName, sequenceName, sequenceConfig, executionPanelRef, setAbortDisabled,  }) => {
+  const { displayLogMessages } = useMessageLog({ endpoint });
   const [showModal, setShowModal] = useState(false);
   const readableSeqName = String(sequenceName).replaceAll("_", " ");
 
@@ -19,10 +19,10 @@ const SequenceCard = ({ sequence, sequenceName, sequenceFile, executionPanelRef,
 
   // useEffect to run displayExecution when execution starts
   useEffect(() => {
-    if (sequencer_endpoint.data?.is_executing && executionPanelRef.current) {
+    if (endpoint.data?.is_executing && executionPanelRef.current) {
       executionPanelRef.current?.displayExecution?.(sequenceName);
     }
-  }, [sequencer_endpoint.data?.is_executing]); // Runs when endpoint indicates sequence is executing
+  }, [endpoint.data?.is_executing]); // Runs when endpoint indicates sequence is executing
 
 
   return (
@@ -39,7 +39,7 @@ const SequenceCard = ({ sequence, sequenceName, sequenceFile, executionPanelRef,
         </Col>
         <Col>
           <EndpointButton
-            endpoint={sequencer_endpoint}
+            endpoint={endpoint}
             fullpath={"execute"}
             variant="primary"
             className="w-100"
@@ -56,9 +56,9 @@ const SequenceCard = ({ sequence, sequenceName, sequenceFile, executionPanelRef,
         </Modal.Header>
         <Modal.Body>
           <ModalParams 
-            endpoint={sequencer_endpoint}
-            sequence={sequence}
-            sequenceFile={sequenceFile}
+            endpoint={endpoint}
+            sequenceConfig={sequenceConfig}
+            moduleName={moduleName}
             sequenceName={sequenceName}
           />
         </Modal.Body>

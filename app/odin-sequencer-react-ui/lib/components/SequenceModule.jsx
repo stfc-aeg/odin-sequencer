@@ -4,13 +4,19 @@ import { Row } from 'react-bootstrap'
 
 /* Constructs Accordion layer for each sequence module, then intialises the CardRow to display sequences. */
 
-const SequenceModule = ({sequences, header, executionPanelRef, setAbortDisabled, sequencer_endpoint}) => {
+const SequenceModule = ({endpoint, moduleName, sequences, executionPanelRef, setAbortDisabled}) => {
   return (
-    <Accordion.Item eventKey={header}>
-      <Accordion.Header>{header}</Accordion.Header>
+    <Accordion.Item eventKey={moduleName}>
+      <Accordion.Header>{moduleName}</Accordion.Header>
       <Accordion.Body>
         <Row>
-          <CardRow sequences={sequences} row_title={header} executionPanelRef={executionPanelRef} setAbortDisabled={setAbortDisabled} sequencer_endpoint={sequencer_endpoint}></CardRow>
+          <CardRow
+            endpoint={endpoint}
+            sequences={sequences}
+            moduleName={moduleName}
+            executionPanelRef={executionPanelRef}
+            setAbortDisabled={setAbortDisabled}
+          />
         </Row>
       </Accordion.Body>
     </Accordion.Item>

@@ -4,21 +4,20 @@ import SequenceButtons from './SequenceButtons'
 import { Col, Row } from 'react-bootstrap';
 import { TitleCard } from 'odin-react';
 
-const SequenceTable = ({ fetchModules, sequenceModules, executionPanelRef, setAbortDisabled, sequencer_endpoint }) => {
+const SequenceTable = ({ endpoint, executionPanelRef, setAbortDisabled }) => {
   return (
     <TitleCard title={
       <Row>
         <Col xs={3} className="d-flex align-items-center" style={{fonstSize:'1.3rem'}}>Sequences</Col>
-        <Col xs={9}><SequenceButtons reloadModules={fetchModules} executionPanelRef={executionPanelRef} setAbortDisabled={setAbortDisabled} sequencer_endpoint={sequencer_endpoint}/></Col>
+        <Col xs={9}><SequenceButtons endpoint={endpoint}/></Col>
       </Row>
     }>
       <Col>
         <Accordion>
           <ModuleList
-            sequence_modules={sequenceModules}
+            endpoint={endpoint}
             executionPanelRef={executionPanelRef}
             setAbortDisabled={setAbortDisabled}
-            sequencer_endpoint={sequencer_endpoint}
           />
         </Accordion>
       </Col>

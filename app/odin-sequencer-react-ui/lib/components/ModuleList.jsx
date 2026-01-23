@@ -3,20 +3,26 @@ import Accordion from 'react-bootstrap/Accordion';
 
 /* Initialises a SequenceModule component for each module found in the object. */
 
-const ModuleList = ({sequence_modules, executionPanelRef, setAbortDisabled, sequencer_endpoint}) => {
+const ModuleList = ({endpoint, executionPanelRef, setAbortDisabled}) => {
 
-    sequence_modules = Object.fromEntries(Object.entries(sequence_modules).sort());
-
-    //const sequences_modules_obj = JSON.parse(sequence_modules)
-    const sequences_modules_obj = sequence_modules;
-
-    const listHeaders = Object.entries(sequences_modules_obj).flatMap(([moduleKey,sequences]) =>
-      <SequenceModule key={moduleKey} header={moduleKey} sequences={JSON.stringify(sequences)} executionPanelRef={executionPanelRef} setAbortDisabled={setAbortDisabled} sequencer_endpoint={sequencer_endpoint}></SequenceModule>
+    const sequenceModules = endpoint.data?.sequence_modules ?? {};
+    const sortedModules = Object.entries(sequenceModules).sort(
+      ([a], [b]) => a.localeCompare(b)
     )
 
     return (
       <Accordion alwaysOpen>
-        {listHeaders}
+        {sortedModules.map(([moduleName, sequences]) => (
+            <SequenceModule
+              endpoint={endpoint}
+              key={moduleName}
+              moduleName={moduleName}
+              sequences={sequences}
+              executionPanelRef={executionPanelRef}
+              setAbortDisabled={setAbortDisabled}
+            />
+          ))
+        }
       </Accordion>
       );
 }

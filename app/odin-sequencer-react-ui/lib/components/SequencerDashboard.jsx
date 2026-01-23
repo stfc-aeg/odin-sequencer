@@ -5,27 +5,10 @@ import SequenceTable from './SequenceTable';
 
 import MessageLog from './MessageLog';
 
-function BasicExample({ sequencer_endpoint }) {
-  const [sequenceModules, setSequenceModules] = useState({});
-  const [error, setError] = useState({});
+function BasicExample({ endpoint }) {
   const [abortDisabled, setAbortDisabled] = useState(true);
 
   const executionPanelRef = useRef(null);
-
-  const fetchModules = () => {
-    return sequencer_endpoint.get('')
-      .then(result => {
-        setSequenceModules(result.sequence_modules);
-      })
-      .catch(err => {
-        console.error("Error fetching endpoint data:", err);
-        setError(err.message);
-      });
-  };
-
-  useEffect(() => {
-    fetchModules();
-  }, []);
 
   return (
     <Col>
@@ -34,17 +17,15 @@ function BasicExample({ sequencer_endpoint }) {
           ref={executionPanelRef}
           abortDisabled={abortDisabled}
           setAbortDisabled={setAbortDisabled}
-          sequencer_endpoint={sequencer_endpoint}
+          endpoint={endpoint}
         />
       </Row>
       <Row>
         <Col xs={12} lg={6}>
           <SequenceTable
-            fetchModules={fetchModules}
-            sequenceModules={sequenceModules}
+            endpoint={endpoint}
             executionPanelRef={executionPanelRef}
             setAbortDisabled={setAbortDisabled}
-            sequencer_endpoint={sequencer_endpoint}
           />
         </Col>
         <Col xs={12} lg={6}>
