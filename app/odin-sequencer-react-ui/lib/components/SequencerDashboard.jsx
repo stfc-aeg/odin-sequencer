@@ -21,7 +21,7 @@ function BasicExample({ endpoint }) {
           />
         </Col>
         <Col xs={12} lg={6}>
-          <MessageLog/>
+          <MessageLog endpoint={endpoint}/>
         </Col>
       </Row>
     </Col>
