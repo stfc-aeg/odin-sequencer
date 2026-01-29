@@ -1,13 +1,17 @@
-import { useEffect, useRef, useState } from 'react'
-import { TitleCard, WithEndpoint } from 'odin-react'
-import { Form, Col } from 'react-bootstrap'
+import { useEffect, useRef, useState, useCallback } from 'react'
+import { OdinEventLog } from 'odin-react'
 
 const POLL_INTERVAL_MS = 1000
-const EndpointFormControl = WithEndpoint(Form.Control);
 
 const MessageLog = ({ endpoint }) => {
-  const [messages, setMessages] = useState([])
+  const [events, setEvents] = useState([])
   const lastTimestampRef = useRef(null)
+
+  const getLatestLogs = useCallback((timestamp) => {
+    return events.filter(event => 
+      !timestamp || new Date(event.timestamp) > new Date(timestamp)
+    )
+  }, [events])
 
   useEffect(() => {
     let timer
@@ -22,17 +26,24 @@ const MessageLog = ({ endpoint }) => {
 
       if (!newLogs.length) return
 
-      setMessages(prev => {
-        // Filter out anything we've already seen (safety net)
-        const filtered = newLogs.filter(
-          ([ts, msg]) =>
-            !prev.some(([pTs, pMsg]) => pTs === ts && pMsg === msg)
+      setEvents(prev => {
+        const transformed = newLogs.map(([timestamp, message, level]) => ({
+          timestamp,
+          message,
+          level
+        }))
+
+        const filtered = transformed.filter(
+          (log) =>
+            !prev.some(
+              (pLog) => pLog.timestamp === log.timestamp && pLog.message === log.message
+            )
         )
 
         if (!filtered.length) return prev
 
         const last = filtered.at(-1)
-        lastTimestampRef.current = last[0]
+        lastTimestampRef.current = last.timestamp
 
         return [...prev, ...filtered]
       })
@@ -44,53 +55,14 @@ const MessageLog = ({ endpoint }) => {
     return () => clearInterval(timer)
   }, [endpoint])
 
-  const logText = messages
-    .map(([timestamp, msg]) => `[${timestamp}] ${msg}`)
-    .join('\n')
-
   return (
-    <TitleCard title="Log Messages">
-      <Col>
-        <EndpointFormControl
-          endpoint={endpoint}
-          fullpath="log_messages"
-          as="textarea"
-          readOnly
-          disabled
-          value={logText}
-          style={{
-            height: '600px',
-            overflowY: 'auto',
-            resize: 'none',
-            whiteSpace: 'pre-wrap',
-            fontFamily: 'monospace',
-            backgroundColor: '#f7f7f7'
-          }}
-        />
-      </Col>
-    </TitleCard>
+    <OdinEventLog
+      events={events}
+      getLatestLogs={getLatestLogs}
+      refreshRate={POLL_INTERVAL_MS}
+      displayHeight="500px"
+    />
   )
-
-
-  // return (
-  //   <TitleCard title="Log Messages">
-  //     <Col>
-  //       <Form.Control
-  //         as="textarea"
-  //         readOnly
-  //         value={logText}
-  //         style={{
-  //           height: '600px',
-  //           overflowY: 'auto',
-  //           resize: 'none',
-  //           whiteSpace: 'pre-wrap',
-  //           fontFamily: 'monospace',
-  //           backgroundColor: '#f7f7f7'
-  //         }}
-  //       />
-  //     </Col>
-  //   </TitleCard>
-  // )
 }
 
 export default MessageLog
