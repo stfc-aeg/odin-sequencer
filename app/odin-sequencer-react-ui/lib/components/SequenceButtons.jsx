@@ -1,7 +1,3 @@
-import { useState, useEffect, useRef } from 'react';
-import { useMessageLog } from './useMessageLog';
-import { handleAlerts } from './alertUtils';
-import { awaitExecutionComplete, awaitProcessExecutionComplete } from './useMessageLog';
 import { Button, Form, Stack } from 'react-bootstrap';
 import { WithEndpoint } from 'odin-react';
 
@@ -9,7 +5,6 @@ const EndpointCheck = WithEndpoint(Form.Check);
 const EndpointButton = WithEndpoint(Button);
 
 const SequenceButtons = ({ endpoint }) => {
-    const { displayLogMessages } = useMessageLog({ endpoint })
 
     return (
       <Form>

@@ -1,16 +1,13 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState } from 'react'
 import { Button, Modal, Col, Row } from 'react-bootstrap';
 import { TitleCard, WithEndpoint } from 'odin-react';
 import ModalParams from './ModalParams'
-import { handleAlerts } from './alertUtils';
-import { useMessageLog, awaitExecutionComplete, awaitProcessExecutionComplete } from './useMessageLog';
 
 /* Constructs a card for each sequence within the module */
 
 const EndpointButton = WithEndpoint(Button);
 
 const SequenceCard = ({ endpoint, moduleName, sequenceName, sequenceConfig }) => {
-  const { displayLogMessages } = useMessageLog({ endpoint });
   const [showModal, setShowModal] = useState(false);
   const readableSeqName = String(sequenceName).replaceAll("_", " ");
 
