@@ -522,7 +522,28 @@ class CommandSequenceManager:
 
         :param logging_func: the logging function to register
         """
-        self.external_logger = logging_func
+        self.external_loggers.append(logging_func)
+
+    def register_sequence_start_hook(self, start_func):
+        """Register a function to be called when a sequence is executed.
+
+        This method allows an external execution function to be registered so that the execute
+        function can call it before beginning the sequence.
+        Any args, kwargs, and function name will be passed to the hook function.
+
+        :param start_func: the start function to register
+        """
+        self.sequence_start_hooks.append(start_func)
+
+    def register_sequence_finish_hook(self, end_func):
+        """Register a function to be called after a sequence is executed.
+
+        This method allows an external excecution function to be registered so that the execute
+        function can call it once the sequence is complete, in the finally clause.
+
+        :param end_func: the end function to register
+        """
+        self.sequence_finish_hooks.append(end_func)
 
     def execute(self, sequence_name, *args, **kwargs):
         """Execute a command sequence.
@@ -539,7 +560,7 @@ class CommandSequenceManager:
         :param *kwargs: variable list of keyword arguments to pass to function
         :return: return value of called function
         """
-        if self.auto_reload and self.module_modifications_detected:
+        if self.auto_reload and self.module_modifications_detected():
             modified_module_paths = self.get_modified_module_paths()
             if modified_module_paths:
                 self.reload(modified_module_paths)
@@ -548,12 +569,27 @@ class CommandSequenceManager:
             raise  CommandSequenceError(
                 'Missing command sequence: {}'.format(sequence_name)
             )
+        # At new execution, end hooks should be reset
+        self._finish_hooks_called = False
+
+        if self.sequence_start_hooks and not self._start_hooks_called:
+            self._start_hooks_called = True
+            for hook in self.sequence_start_hooks:
+                hook(sequence_name, args, kwargs)
+
         try:
             return getattr(self, sequence_name)(*args, **kwargs)
         except CommandSequenceError as error:
             raise error
         except:
             raise CommandSequenceError(sys.exc_info()[1])
+        finally:
+            self._is_executing = False
+            self._start_hooks_called = False
+            if self.sequence_finish_hooks and not self._finish_hooks_called:
+                self._finish_hooks_called = True
+                for hook in self.sequence_finish_hooks:
+                    hook(sequence_name, args, kwargs)
 
     def add_context(self, name, obj):
         """Add an object to the manager context.
@@ -596,7 +632,7 @@ class CommandSequenceManager:
 
         :param name: name of the missing attribute
         """
-        if self.auto_reload and self.module_modifications_detected:
+        if self.auto_reload and self.module_modifications_detected():
             modified_module_paths = self.get_modified_module_paths()
             if modified_module_paths:
                 self.reload(modified_module_paths)
@@ -629,6 +665,16 @@ class CommandSequenceManager:
         :param abort: boolean abort flag, set to true to abort sequence
         """
         self._abort_sequence = abort
+
+    @property
+    def is_executing(self):
+        """Get the current sequence execution status.
+
+        This property method returns the current sequence execution status.
+
+        :return: boolean execution status
+        """
+        return self._is_executing
 
     @property
     def progress(self):
