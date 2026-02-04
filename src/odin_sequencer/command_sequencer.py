@@ -107,7 +107,7 @@ class CommandSequencer:
         if path == "log_messages":
             # Use query parameter if present
             timestamp = kwargs.get("last_message_timestamp", [""])[0] if kwargs else ""
-            return self.get_log_messsages(timestamp)
+            return self.get_log_messages(timestamp)
         
         try:
             return self.param_tree.get(path)
@@ -280,14 +280,14 @@ class CommandSequencer:
         try:
             self.manager.execute(seq_name, **kwargs)
         except CommandSequenceError as error:
-            self.manager.log_message('<b style="color:red">Execution error</b>: {}: {}'.format(seq_name, error))
+            self.manager.log_message('Execution error: {}: {}'.format(seq_name, error), level="error")
             logging.error("Sequence execution error: {}: {}".format(seq_name, error))
         finally:
             self.is_executing = False
             self.execute_seq_name = ""
             if self.manager.abort_sequence:
                 self.manager.log_message(
-                    '<span style="color:orange">Execution of sequence "{}" aborted</span>'.format(seq_name)
+                    'Execution of sequence "{}" aborted'.format(seq_name), level="warning"
                 )
                 logging.info("Execution of sequence {} aborted".format(seq_name))
                 self.manager.abort_sequence = False
@@ -338,20 +338,16 @@ class CommandSequencer:
         except ValueError as error:
             raise CommandSequenceError('Empty process task list while trying to remove group {} and task {}'.format(group_uuid, task_uuid))
     
-    def log(self, *args, **kwargs):
+    def log(self, message, level="info", **kwargs):
         """This method is register as an external logger with the manager. Doing this results
         in all the print messages in the loaded sequences to be passed to this method. The method
         intercepts each print message, adds a timestamp to it and puts it onto the deque.
+        The method also supports a level argument to optionally specify a log level.
         """
         timestamp = datetime.now()
-        message = ''
+        self.log_messages_deque.append((timestamp, message, level))
 
-        for arg in args:
-            message += str(arg)
-
-        self.log_messages_deque.append((timestamp, message))
-
-    def get_log_messsages(self, last_message_timestamp):
+    def get_log_messages(self, last_message_timestamp):
         """This method gets the log messages that are appended to the log message deque by the
         log function, and adds them to the log_messages variable. If a last message timestamp is
         provided, it will only get the subsequent log messages if there are any, otherwise it will
@@ -361,17 +357,17 @@ class CommandSequencer:
         if last_message_timestamp:
             self.last_message_timestamp = last_message_timestamp
             last_message_timestamp = datetime.strptime(last_message_timestamp,
-                                                       "%Y-%m-%d %H:%M:%S.%f")
+                                                    "%Y-%m-%d %H:%M:%S.%f")
 
             # Casting the deque to a list so that messages are not popped
-            for index, (timestamp, log_message) in enumerate(list(self.log_messages_deque)):
+            for index, (timestamp, log_message, level) in enumerate(list(self.log_messages_deque)):
                 if timestamp > last_message_timestamp:
                     logs = list(self.log_messages_deque)[index:]
                     break
         else:
             logs = list(self.log_messages_deque)
-        
-        log_messages = [(str(timestamp), log_message) for timestamp, log_message in logs]
+
+        log_messages = [(str(timestamp), log_message, level) for timestamp, log_message, level in logs]
         return {"log_messages": log_messages}
 
     def _get_seq_param_values(self, seq):

@@ -347,7 +347,7 @@ def test_execute_sequence_string_list_param(create_command_sequencer):
 
     command_sequencer.execute_sequence(seq_name)
     _await_execution_complete(command_sequencer)
-    command_sequencer.get_log_messsages('')
+    command_sequencer.get_log_messages('')
     log_messages = command_sequencer.log_messages
 
     assert log_messages[0][1] == str(new_list_val)
@@ -365,7 +365,7 @@ def test_execute_sequence_int_list_param_int_values_passed_as_strings(create_com
 
     command_sequencer.execute_sequence(seq_name)
     _await_execution_complete(command_sequencer)
-    command_sequencer.get_log_messsages('')
+    command_sequencer.get_log_messages('')
     log_messages = command_sequencer.log_messages
 
     assert log_messages[0][1] == '[0, 1]'
@@ -387,7 +387,7 @@ def test_execute_sequence_int_list_param_non_int_values_passed_as_strings(create
     ):
         command_sequencer.execute_sequence(seq_name)
 
-    command_sequencer.get_log_messsages('')
+    command_sequencer.get_log_messages('')
     log_messages = command_sequencer.log_messages
     assert command_sequencer.is_executing is False
     assert len(log_messages) == 0
@@ -405,7 +405,7 @@ def test_execute_sequence_float_list_param_float_values_passed_as_strings(create
 
     command_sequencer.execute_sequence(seq_name)
     _await_execution_complete(command_sequencer)
-    command_sequencer.get_log_messsages('')
+    command_sequencer.get_log_messages('')
     log_messages = command_sequencer.log_messages
 
     assert log_messages[0][1] == '[0.5, 2.7]'
@@ -428,7 +428,7 @@ def test_execute_sequence_float_list_param_non_float_values_passed_as_strings(
     ):
         command_sequencer.execute_sequence(seq_name)
 
-    command_sequencer.get_log_messsages('')
+    command_sequencer.get_log_messages('')
     log_messages = command_sequencer.log_messages
     assert command_sequencer.is_executing is False
     assert len(log_messages) == 0
@@ -447,7 +447,7 @@ def test_execute_sequence_float_list_param_bool_values_passed_as_strings(
 
     command_sequencer.execute_sequence(seq_name)
     _await_execution_complete(command_sequencer)
-    command_sequencer.get_log_messsages('')
+    command_sequencer.get_log_messages('')
     log_messages = command_sequencer.log_messages
 
     assert log_messages[0][1] == '[True, False]'
@@ -470,7 +470,7 @@ def test_execute_sequence_float_list_param_non_bool_values_passed_as_strings(
     ):
         command_sequencer.execute_sequence(seq_name)
 
-    command_sequencer.get_log_messsages('')
+    command_sequencer.get_log_messages('')
     log_messages = command_sequencer.log_messages
     assert command_sequencer.is_executing is False
     assert len(log_messages) == 0
@@ -553,7 +553,7 @@ def test_get_log_messages_with_no_last_message_timestamp(shared_datadir, create_
     command_sequencer.execute_sequence('generate_message')
     _await_execution_complete(command_sequencer)
 
-    command_sequencer.get_log_messsages('')
+    command_sequencer.get_log_messages('')
     log_messages = command_sequencer.log_messages
 
     assert len(log_messages) == len(list(command_sequencer.log_messages_deque))
@@ -570,7 +570,7 @@ def test_get_log_messages_with_last_message_timestamp(create_command_sequencer,
     _await_execution_complete(command_sequencer)
     last_message_timestamp = str(list(command_sequencer.log_messages_deque)[0][0])
 
-    command_sequencer.get_log_messsages(last_message_timestamp)
+    command_sequencer.get_log_messages(last_message_timestamp)
     log_messages = command_sequencer.log_messages
 
     assert len(log_messages) == 1

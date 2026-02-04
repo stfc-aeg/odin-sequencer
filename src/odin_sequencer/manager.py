@@ -17,6 +17,7 @@ from functools import partial
 from inspect import signature
 from .exceptions import CommandSequenceError
 from .watcher import FileWatcherFactory
+from .sequence_logger import SequenceLogger
 
 if sys.version_info < (3, 6, 0):  # pragma: no cover
     class ModuleNotFoundError(ImportError):  # pylint: disable=redefined-builtin
@@ -50,9 +51,14 @@ class CommandSequenceManager:
         self.module_watcher = None
         self.module_watching = False
         self.auto_reload = False
-        self.external_logger = None
+        self._start_hooks_called = False
+        self.sequence_start_hooks = []
+        self.external_loggers = []
+        self._finish_hooks_called = False
+        self.sequence_finish_hooks = []
         self._abort_sequence = False
         self._progress = {}
+        self._is_executing = False
 
         self.reset_progress()
 
@@ -489,6 +495,7 @@ class CommandSequenceManager:
             # Doing this allows the log_message function to intercept and pass the print messages
             # to an external logging function.
             setattr(module, 'print', self.log_message)
+            setattr(module, 'log', SequenceLogger(self.log_message))
 
     def log_message(self, *args, **kwargs):
         """ Determine what to do with the messages that are passed to the print statement in the
@@ -500,8 +507,10 @@ class CommandSequenceManager:
         :param *args: variable list of positional arguments to pass to function
         :param *kwargs: variable list of keyword arguments to pass to function
         """
-        if self.external_logger:
-            self.external_logger(*args, **kwargs)
+        message = " ".join(str(arg) for arg in args)
+        if self.external_loggers:
+            for external_logger in self.external_loggers:
+                external_logger(message, **kwargs)
         else:
             print(*args, **kwargs)
 
