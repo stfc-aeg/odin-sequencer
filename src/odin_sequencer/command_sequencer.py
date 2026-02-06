@@ -109,7 +109,7 @@ class CommandSequencer:
                 "log_messages": (lambda: self.log_messages, None),
                 "last_message_timestamp": (
                     lambda: self.last_message_timestamp,
-                    self.get_log_messsages,
+                    self.get_log_messages,
                 ),
             }
         )
