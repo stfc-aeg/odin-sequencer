@@ -498,23 +498,17 @@ class CommandSequenceManager:
             setattr(module, 'print', partial(self.log_message, level=None))
             setattr(module, 'log', SequenceLogger(self.log_message))
 
-    def log_message(self, *args, level, **kwargs):
-        """ Determine what to do with the messages that are passed to the print statement in the
-        loaded module sequences.
+    def log_message(self, message, level, **kwargs):
+        """Process messages passed to the print or log statements in the loaded module sequences.
+        This method intercepts a string message from print or log, and passes it with a level
+        on to any registered loggers.
+        There is a minimum of one logger, from the sequencer manager.
+        Messages passed in via print have None as the level, see self.resolve().
 
-        This method passes the print messages to an external logger if registered, or to the
-        built-in print function.
-
-        :param level: level of the log e.g.: debug, info, warning, error
-        :param *args: variable list of positional arguments to pass to function
-        :param *kwargs: variable list of keyword arguments to pass to function
+        :param message: message to be logged
+        :param level: level of the log e.g.: debug, info, warning, error, None
+        :param **kwargs: keyword arguments. unused in this function but needed to support print
         """
-        #message = " ".join(str(arg) for arg in args)
-        print(args)
-        print(kwargs)
-        with io.StringIO() as buf:
-            print(*args, **kwargs, file=buf)
-            message = buf.getvalue()
         if self.loggers:
             for logger in self.loggers:
                 logger(message, level)

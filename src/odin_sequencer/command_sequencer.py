@@ -367,10 +367,10 @@ class CommandSequencer:
             raise CommandSequenceError('Empty process task list while trying to remove group {} and task {}'.format(group_uuid, task_uuid))
     
     def log(self, message, level):
-        """This method is register as an external logger with the manager. Doing this results
-        in all the print messages in the loaded sequences to be passed to this method. The method
-        intercepts each print message, adds a timestamp to it and puts it onto the deque.
-        The method also supports a level argument to optionally specify a log level.
+        """This method is registered as a logger with the manager. Doing this results
+        in all the print or log messages in the loaded sequences to be passed to this method. The method
+        intercepts each print/log message, adds a timestamp to it and puts it onto the deque.
+        The method also supports a level argument to specify a log level.
         """
         timestamp = datetime.now()
         if not level:
