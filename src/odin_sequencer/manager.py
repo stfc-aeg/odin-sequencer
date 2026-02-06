@@ -11,6 +11,7 @@ import importlib.util
 import inspect
 import sys
 import os
+import io
 
 from pathlib import Path
 from functools import partial
@@ -53,7 +54,7 @@ class CommandSequenceManager:
         self.auto_reload = False
         self._start_hooks_called = False
         self.sequence_start_hooks = []
-        self.external_loggers = []
+        self.loggers = []
         self._finish_hooks_called = False
         self.sequence_finish_hooks = []
         self._abort_sequence = False
@@ -494,27 +495,31 @@ class CommandSequenceManager:
             # called when the print statement is called in any of the loaded module sequences.
             # Doing this allows the log_message function to intercept and pass the print messages
             # to an external logging function.
-            setattr(module, 'print', self.log_message)
+            setattr(module, 'print', partial(self.log_message, level=None))
             setattr(module, 'log', SequenceLogger(self.log_message))
 
-    def log_message(self, *args, **kwargs):
+    def log_message(self, *args, level, **kwargs):
         """ Determine what to do with the messages that are passed to the print statement in the
         loaded module sequences.
 
         This method passes the print messages to an external logger if registered, or to the
         built-in print function.
 
+        :param level: level of the log e.g.: debug, info, warning, error
         :param *args: variable list of positional arguments to pass to function
         :param *kwargs: variable list of keyword arguments to pass to function
         """
-        message = " ".join(str(arg) for arg in args)
-        if self.external_loggers:
-            for external_logger in self.external_loggers:
-                external_logger(message, **kwargs)
-        else:
-            print(*args, **kwargs)
-
-    def register_external_logger(self, logging_func):
+        #message = " ".join(str(arg) for arg in args)
+        print(args)
+        print(kwargs)
+        with io.StringIO() as buf:
+            print(*args, **kwargs, file=buf)
+            message = buf.getvalue()
+        if self.loggers:
+            for logger in self.loggers:
+                logger(message, level)
+ 
+    def register_logger(self, logging_func):
         """ Register an external logging function.
 
         This method allows an external logging function to be registered so that the log_message
@@ -522,7 +527,7 @@ class CommandSequenceManager:
 
         :param logging_func: the logging function to register
         """
-        self.external_loggers.append(logging_func)
+        self.loggers.append(logging_func)
 
     def register_sequence_start_hook(self, start_func):
         """Register a function to be called when a sequence is executed.

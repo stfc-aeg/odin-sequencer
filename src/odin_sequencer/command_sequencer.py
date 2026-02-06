@@ -46,7 +46,7 @@ class CommandSequencer:
         self.sequence_modules = {}
 
         self.manager = CommandSequenceManager()
-        self.manager.register_external_logger(self.log)
+        self.manager.register_logger(self.log)
         self.manager_initialised = False
         self._initialise_manager()
 
@@ -366,13 +366,15 @@ class CommandSequencer:
         except ValueError as error:
             raise CommandSequenceError('Empty process task list while trying to remove group {} and task {}'.format(group_uuid, task_uuid))
     
-    def log(self, message, level="info", **kwargs):
+    def log(self, message, level):
         """This method is register as an external logger with the manager. Doing this results
         in all the print messages in the loaded sequences to be passed to this method. The method
         intercepts each print message, adds a timestamp to it and puts it onto the deque.
         The method also supports a level argument to optionally specify a log level.
         """
         timestamp = datetime.now()
+        if not level:
+            level = 'info'
         self.log_messages_deque.append((timestamp, message, level))
 
     def get_log_messages(self, last_message_timestamp):
