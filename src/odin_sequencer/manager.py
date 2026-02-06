@@ -578,6 +578,7 @@ class CommandSequenceManager:
                 hook(sequence_name, args, kwargs)
 
         try:
+            self._is_executing = True
             return getattr(self, sequence_name)(*args, **kwargs)
         except CommandSequenceError as error:
             raise error
