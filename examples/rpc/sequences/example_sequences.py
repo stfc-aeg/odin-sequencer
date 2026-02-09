@@ -8,6 +8,7 @@ provides = [
     "exceptional_add",
     "array_test",
     "sine_test",
+    "log_test"
 ]
 
 
@@ -51,12 +52,28 @@ def abortable_sequence(num_loops=100, loop_delay=0.1):
 
 def array_test(shape=[10, 10]):
     arr = np.arange(np.prod(shape)).reshape(shape)
-    print("Numpy array created with shape:", shape)
+    print("Numpy array created with shape", shape)
     return arr
 
 
 def sine_test(freq=5, duration=1, rate=1000):
     t = np.linspace(0, duration, int(rate * duration), endpoint=False)
     signal = np.sin(2 * np.pi * freq * t)
-    print("Sine wave generated with frequency:", freq)
+    print(f"Sine wave generated with frequency: {freq}")
     return t, signal
+
+def log_test(time_a=5, time_b=7):
+
+    print("print (traditional formatting) args were time_a %s, time_b %s" % (time_a, time_b))
+    log.debug("log (traditional formatting) args were time_a %s, time_b %s" % (time_a, time_b))
+
+    print("print (string.format) args were time_a {}, time_b {}".format(time_a, time_b))
+    log.info("log (string.format) args were time_a {}, time_b {}".format(time_a, time_b))
+
+    print(f"print (f-string) args were time_a {time_a}, time_b {time_b}")
+    log.warning(f"log (f-string) args were time_a {time_a}, time_b {time_b}")
+
+    print("print (arg list) args were:", time_a, time_b)
+    log.error("log (arg list) args were: %s %s", time_a, time_b)
+    log.error("log (arg list, no formatting) args were:", time_a, time_b)
+

@@ -72,17 +72,16 @@ def test(num_numbers=10):
 
 def logging_sequence(time_a=1, time_b=2):
     """Simple sequence to demonstrate logging functionality."""
-    # % string formatting
-    log.debug("Sequence has begun with timer_a set to %d", time_a)
-    log.debug("and timer_b set to %d" % time_b)
-    # string .format()
-    log.info("Starting first timer of {:d} seconds".format(time_a))
-    time.sleep(time_a)
-    # f formatting
-    log.info(f"First timer complete, starting second timer of {time_b} seconds")
-    time.sleep(time_b)
-    log.warning("Sequence is almost complete, ending in one second")
-    time.sleep(1)
-    log.error(f"Pretend that something went wrong here.")
-    print("Print statements default to info level in the sequencer only. Level is otherwise None")
-    print(f"Sequence complete")
+
+    print("print (traditional formatting) args were time_a %s, time_b %s" % (time_a, time_b))
+    log.debug("log (traditional formatting) args were time_a %s, time_b %s" % (time_a, time_b))
+
+    print("print (string.format) args were time_a {}, time_b {}".format(time_a, time_b))
+    log.info("log (string.format) args were time_a {}, time_b {}".format(time_a, time_b))
+
+    print(f"print (f-string) args were time_a {time_a}, time_b {time_b}")
+    log.warning(f"log (f-string) args were time_a {time_a}, time_b {time_b}")
+
+    print("print (arg list) args were:", time_a, time_b)
+    log.error("log (arg list) args were: %s %s", time_a, time_b)
+    log.error("log (arg list, no formatting) args were:", time_a, time_b)

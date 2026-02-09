@@ -495,26 +495,41 @@ class CommandSequenceManager:
             # called when the print statement is called in any of the loaded module sequences.
             # Doing this allows the log_message function to intercept and pass the print messages
             # to an external logging function.
-            setattr(module, 'print', partial(self.log_message, level=None))
+            setattr(module, 'print', self.print_message)
             setattr(module, 'log', SequenceLogger(self.log_message))
 
-    def log_message(self, message, level, **kwargs):
+    def print_message(self, *args, **kwargs):
+        """Log message passed to the print statement in the loaded module sequences.
+
+        This method is injected into loaded sequence module as the print function and replicates
+        default print functionality, allowing for the same formatting of strings. Messages are
+        formatted and logged with all registered loggers.
+        :param args: message components to be formatted and logged
+        :param kwargs: additional keyword arguments to be passed to the print function
+        """
+        with io.StringIO() as buf:
+            print(*args, **kwargs, file=buf)
+            message = buf.getvalue().strip()
+
+        self.log_message(message, level=None)
+
+
+    def log_message(self, message, level):
         """Process messages passed to the print or log statements in the loaded module sequences.
-        This method intercepts a string message from print or log, and passes it with a level
-        on to any registered loggers.
-        There is a minimum of one logger, from the sequencer manager.
-        Messages passed in via print have None as the level, see self.resolve().
+
+        This method intercepts a string message from print or log, and passes it with a level on to
+        any registered loggers. There is a minimum of one logger, from the sequencer manager.
+        Messages passed in via print have None as the level.
 
         :param message: message to be logged
         :param level: level of the log e.g.: debug, info, warning, error, None
-        :param **kwargs: keyword arguments. unused in this function but needed to support print
         """
         if self.loggers:
             for logger in self.loggers:
                 logger(message, level)
- 
+
     def register_logger(self, logging_func):
-        """ Register an external logging function.
+        """Register an external logging function.
 
         This method allows an external logging function to be registered so that the log_message
         function can pass the print messages to it.
