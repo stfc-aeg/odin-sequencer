@@ -4,12 +4,12 @@ import SequenceButtons from './SequenceButtons'
 import { Col, Row } from 'react-bootstrap';
 import { TitleCard } from 'odin-react';
 
-const SequenceTable = ({ endpoint }) => {
+const SequenceTable = ({ endpoint, onReload }) => {
   return (
     <TitleCard title={
       <Row>
         <Col xs={3} className="d-flex align-items-center" style={{fonstSize:'1.3rem'}}>Sequences</Col>
-        <Col xs={9}><SequenceButtons endpoint={endpoint}/></Col>
+        <Col xs={9}><SequenceButtons endpoint={endpoint} onReload={onReload}/></Col>
       </Row>
     }>
       <Col>

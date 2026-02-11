@@ -33,6 +33,7 @@ class CommandSequencer:
         self.detect_module_modifications = False
         self.reload = False
         self.module_reload_failed = False
+        self.reload_status_msg = ""
         self.execute_seq_name = ""
         self.process_tasks = []
         self.process_group_tasks = {}
@@ -79,7 +80,7 @@ class CommandSequencer:
             self.manager_initialised = True
         except CommandSequenceError as e:
             err_msg = "Failed to load command sequence manager: {}".format(e)
-            self.log(err_msg)
+            self.log(err_msg, level="error")
             logging.error(err_msg)
             if raise_on_error:
                 raise CommandSequenceError(err_msg)
@@ -99,7 +100,11 @@ class CommandSequencer:
                     self.set_detect_module_modifications,
                 ),
                 "module_modifications_detected": (self.module_modifications_detected, None),
-                "reload": (lambda: self.reload, self.set_reload),
+                "reload": {
+                    "execute": (lambda: self.reload, self.set_reload),
+                    "success": (lambda: not self.module_reload_failed, None),
+                    "status": (lambda: self.reload_status_msg, None)
+                },
                 "execute": (lambda: self.execute_seq_name, self.execute_sequence),
                 "is_executing": (lambda: self.manager.is_executing, None),
                 "execution_progress": (lambda: self.manager.progress, None),
@@ -145,7 +150,7 @@ class CommandSequencer:
         try:
             self.param_tree.set(path, data)
         except ParameterTreeError as error:
-            self.log(error)
+            self.log(error, level="error")
             raise CommandSequenceError(error)
 
     def set_detect_module_modifications(self, detect_module_modifications):
@@ -227,10 +232,12 @@ class CommandSequencer:
                 # Resolving at the end to avoid dependency issues
                 self.manager.resolve()
                 self.module_reload_failed = False
+                self.reload_status_msg = "Modules successfully reloaded!"
             except CommandSequenceError as error:
                 self.module_reload_failed = True
-                raise CommandSequenceError(
-                    "A problem occurred during the reloading process: {}".format(error)
+                self.reload_status_msg = f"A problem occurred during the reloading process: {error}"
+                logging.error(
+                    self.reload_status_msg
                 )
             finally:
                 self.param_tree = self._build_param_tree()

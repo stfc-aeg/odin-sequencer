@@ -4,7 +4,8 @@ import { WithEndpoint } from 'odin-react';
 const EndpointCheck = WithEndpoint(Form.Check);
 const EndpointButton = WithEndpoint(Button);
 
-const SequenceButtons = ({ endpoint }) => {
+// The optional onReload function here should simply 
+const SequenceButtons = ({ endpoint, onReload }) => {
 
     return (
       <Form>
@@ -17,8 +18,9 @@ const SequenceButtons = ({ endpoint }) => {
           />
           <EndpointButton
             endpoint={endpoint}
-            fullpath="reload"
+            fullpath="reload/execute"
             value={true}
+            post_method={onReload}
           >
             Reload
           </EndpointButton>
@@ -27,4 +29,4 @@ const SequenceButtons = ({ endpoint }) => {
     );
 };
 
-export default SequenceButtons
+export default SequenceButtons;
