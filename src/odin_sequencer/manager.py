@@ -11,12 +11,14 @@ import importlib.util
 import inspect
 import sys
 import os
+import io
 
 from pathlib import Path
 from functools import partial
 from inspect import signature
 from .exceptions import CommandSequenceError
 from .watcher import FileWatcherFactory
+from .sequence_logger import SequenceLogger
 
 if sys.version_info < (3, 6, 0):  # pragma: no cover
     class ModuleNotFoundError(ImportError):  # pylint: disable=redefined-builtin
@@ -52,7 +54,7 @@ class CommandSequenceManager:
         self.auto_reload = False
         self._start_hooks_called = False
         self.sequence_start_hooks = []
-        self.external_loggers = []
+        self.loggers = []
         self._finish_hooks_called = False
         self.sequence_finish_hooks = []
         self._abort_sequence = False
@@ -493,33 +495,48 @@ class CommandSequenceManager:
             # called when the print statement is called in any of the loaded module sequences.
             # Doing this allows the log_message function to intercept and pass the print messages
             # to an external logging function.
-            setattr(module, 'print', self.log_message)
+            setattr(module, 'print', self.print_message)
+            setattr(module, 'log', SequenceLogger(self.log_message))
 
-    def log_message(self, *args, **kwargs):
-        """ Determine what to do with the messages that are passed to the print statement in the
-        loaded module sequences.
+    def print_message(self, *args, **kwargs):
+        """Log message passed to the print statement in the loaded module sequences.
 
-        This method passes the print messages to an external logger if registered, or to the
-        built-in print function.
-
-        :param *args: variable list of positional arguments to pass to function
-        :param *kwargs: variable list of keyword arguments to pass to function
+        This method is injected into loaded sequence module as the print function and replicates
+        default print functionality, allowing for the same formatting of strings. Messages are
+        formatted and logged with all registered loggers.
+        :param args: message components to be formatted and logged
+        :param kwargs: additional keyword arguments to be passed to the print function
         """
-        if self.external_loggers:
-            for external_logger in self.external_loggers:
-                external_logger(*args, **kwargs)
-        else:
-            print(*args, **kwargs)
+        with io.StringIO() as buf:
+            print(*args, **kwargs, file=buf)
+            message = buf.getvalue().strip()
 
-    def register_external_logger(self, logging_func):
-        """ Register an external logging function.
+        self.log_message(message, level=None)
+
+
+    def log_message(self, message, level):
+        """Process messages passed to the print or log statements in the loaded module sequences.
+
+        This method intercepts a string message from print or log, and passes it with a level on to
+        any registered loggers. There is a minimum of one logger, from the sequencer manager.
+        Messages passed in via print have None as the level.
+
+        :param message: message to be logged
+        :param level: level of the log e.g.: debug, info, warning, error, None
+        """
+        if self.loggers:
+            for logger in self.loggers:
+                logger(message, level)
+
+    def register_logger(self, logging_func):
+        """Register an external logging function.
 
         This method allows an external logging function to be registered so that the log_message
         function can pass the print messages to it.
 
         :param logging_func: the logging function to register
         """
-        self.external_loggers.append(logging_func)
+        self.loggers.append(logging_func)
 
     def register_sequence_start_hook(self, start_func):
         """Register a function to be called when a sequence is executed.
@@ -575,6 +592,7 @@ class CommandSequenceManager:
                 hook(sequence_name, args, kwargs)
 
         try:
+            self._is_executing = True
             return getattr(self, sequence_name)(*args, **kwargs)
         except CommandSequenceError as error:
             raise error

@@ -33,6 +33,7 @@ class CommandSequencer:
         self.detect_module_modifications = False
         self.reload = False
         self.module_reload_failed = False
+        self.reload_status_msg = ""
         self.execute_seq_name = ""
         self.process_tasks = []
         self.process_group_tasks = {}
@@ -46,7 +47,7 @@ class CommandSequencer:
         self.sequence_modules = {}
 
         self.manager = CommandSequenceManager()
-        self.manager.register_external_logger(self.log)
+        self.manager.register_logger(self.log)
         self.manager_initialised = False
         self._initialise_manager()
 
@@ -79,7 +80,7 @@ class CommandSequencer:
             self.manager_initialised = True
         except CommandSequenceError as e:
             err_msg = "Failed to load command sequence manager: {}".format(e)
-            self.log(err_msg)
+            self.log(err_msg, level="error")
             logging.error(err_msg)
             if raise_on_error:
                 raise CommandSequenceError(err_msg)
@@ -90,6 +91,7 @@ class CommandSequencer:
         of the outcome of the reloading process (i.e. adding information about any new sequences
         that were added in the loaded module or vice versa).
         """
+       
         return ParameterTree(
             {
                 "sequence_modules": self.sequence_modules,
@@ -98,7 +100,11 @@ class CommandSequencer:
                     self.set_detect_module_modifications,
                 ),
                 "module_modifications_detected": (self.module_modifications_detected, None),
-                "reload": (lambda: self.reload, self.set_reload),
+                "reload": {
+                    "execute": (lambda: self.reload, self.set_reload),
+                    "success": (lambda: not self.module_reload_failed, None),
+                    "status": (lambda: self.reload_status_msg, None)
+                },
                 "execute": (lambda: self.execute_seq_name, self.execute_sequence),
                 "is_executing": (lambda: self.manager.is_executing, None),
                 "execution_progress": (lambda: self.manager.progress, None),
@@ -108,12 +114,12 @@ class CommandSequencer:
                 "log_messages": (lambda: self.log_messages, None),
                 "last_message_timestamp": (
                     lambda: self.last_message_timestamp,
-                    self.get_log_messsages,
+                    self.get_log_messages,
                 ),
             }
         )
 
-    def get(self, path):
+    def get(self, path, kwargs=None):
         """Get parameters from the underlying parameter tree.
 
         This method simply wraps underlying ParameterTree method so that an exceptions can be
@@ -122,6 +128,11 @@ class CommandSequencer:
         :param path: path of parameter tree to get
         :returns: parameter tree at that path as a dictionary
         """
+        if path == "log_messages":
+            # Use query parameter if present
+            timestamp = kwargs.get("last_message_timestamp", [""])[0] if kwargs else ""
+            return self.get_log_messages(timestamp)
+        
         try:
             return self.param_tree.get(path)
         except ParameterTreeError as error:
@@ -139,7 +150,7 @@ class CommandSequencer:
         try:
             self.param_tree.set(path, data)
         except ParameterTreeError as error:
-            self.log(error)
+            self.log(error, level="error")
             raise CommandSequenceError(error)
 
     def set_detect_module_modifications(self, detect_module_modifications):
@@ -221,10 +232,12 @@ class CommandSequencer:
                 # Resolving at the end to avoid dependency issues
                 self.manager.resolve()
                 self.module_reload_failed = False
+                self.reload_status_msg = "Modules successfully reloaded!"
             except CommandSequenceError as error:
                 self.module_reload_failed = True
-                raise CommandSequenceError(
-                    "A problem occurred during the reloading process: {}".format(error)
+                self.reload_status_msg = f"A problem occurred during the reloading process: {error}"
+                logging.error(
+                    self.reload_status_msg
                 )
             finally:
                 self.param_tree = self._build_param_tree()
@@ -302,17 +315,13 @@ class CommandSequencer:
         try:
             self.manager.execute(seq_name, **kwargs)
         except CommandSequenceError as error:
-            self.manager.log_message(
-                '<b style="color:red">Execution error</b>: {}: {}'.format(seq_name, error)
-            )
+            self.manager.log_message('Execution error: {}: {}'.format(seq_name, error), level="error")
             logging.error("Sequence execution error: {}: {}".format(seq_name, error))
         finally:
             self.execute_seq_name = ""
             if self.manager.abort_sequence:
                 self.manager.log_message(
-                    '<span style="color:orange">Execution of sequence "{}" aborted</span>'.format(
-                        seq_name
-                    )
+                    'Execution of sequence "{}" aborted'.format(seq_name), level="warning"
                 )
                 logging.info("Execution of sequence {} aborted".format(seq_name))
                 self.manager.abort_sequence = False
@@ -362,26 +371,20 @@ class CommandSequencer:
                 self.process_group_tasks.pop(group_uuid)
                 return True
         except ValueError as error:
-            raise CommandSequenceError(
-                "Empty process task list while trying to remove group {} and task {}".format(
-                    group_uuid, task_uuid
-                )
-            )
-
-    def log(self, *args, **kwargs):
-        """This method is register as an external logger with the manager. Doing this results
-        in all the print messages in the loaded sequences to be passed to this method. The method
-        intercepts each print message, adds a timestamp to it and puts it onto the deque.
+            raise CommandSequenceError('Empty process task list while trying to remove group {} and task {}'.format(group_uuid, task_uuid))
+    
+    def log(self, message, level):
+        """This method is registered as a logger with the manager. Doing this results
+        in all the print or log messages in the loaded sequences to be passed to this method. The method
+        intercepts each print/log message, adds a timestamp to it and puts it onto the deque.
+        The method also supports a level argument to specify a log level.
         """
         timestamp = datetime.now()
-        message = ""
+        if not level:
+            level = 'info'
+        self.log_messages_deque.append((timestamp, message, level))
 
-        for arg in args:
-            message += str(arg)
-
-        self.log_messages_deque.append((timestamp, message))
-
-    def get_log_messsages(self, last_message_timestamp):
+    def get_log_messages(self, last_message_timestamp):
         """This method gets the log messages that are appended to the log message deque by the
         log function, and adds them to the log_messages variable. If a last message timestamp is
         provided, it will only get the subsequent log messages if there are any, otherwise it will
@@ -389,19 +392,20 @@ class CommandSequencer:
         """
         logs = []
         if last_message_timestamp:
-            last_message_timestamp = datetime.strptime(
-                last_message_timestamp, "%Y-%m-%d %H:%M:%S.%f"
-            )
+            self.last_message_timestamp = last_message_timestamp
+            last_message_timestamp = datetime.strptime(last_message_timestamp,
+                                                    "%Y-%m-%d %H:%M:%S.%f")
 
             # Casting the deque to a list so that messages are not popped
-            for index, (timestamp, log_message) in enumerate(list(self.log_messages_deque)):
+            for index, (timestamp, log_message, level) in enumerate(list(self.log_messages_deque)):
                 if timestamp > last_message_timestamp:
                     logs = list(self.log_messages_deque)[index:]
                     break
         else:
             logs = list(self.log_messages_deque)
 
-        self.log_messages = [(str(timestamp), log_message) for timestamp, log_message in logs]
+        log_messages = [(str(timestamp), log_message, level) for timestamp, log_message, level in logs]
+        return {"log_messages": log_messages}
 
     def _get_seq_param_values(self, seq):
         """This method gets parameter values for the provided sequence from the parameter tree.

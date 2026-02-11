@@ -113,7 +113,7 @@ class RpcServer:
             "reload": self.reload,
         }
 
-        self.manager.register_external_logger(self.logger)
+        self.manager.register_logger(self.logger)
 
     def handle_receive(self, msg):
         """Handle incoming messages from the control channel.
@@ -212,7 +212,7 @@ class RpcServer:
         """
         self.ctrl_channel.send_multipart(msg)
 
-    def logger(self, *args, **kwargs):
+    def logger(self, message, level):
         """Log messages to the log channel.
 
         Args:
@@ -220,7 +220,8 @@ class RpcServer:
             **kwargs: Additional keyword arguments.
 
         """
-        message = "".join(map(str, args))
+        if level:
+            message = f"{level.upper()}: {message}"
         self.log_channel.send_string(message)
 
     @dispatched_method()

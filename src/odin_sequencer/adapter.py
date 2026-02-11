@@ -45,7 +45,10 @@ class CommandSequenceManagerAdapter(ApiAdapter):
         :return: an ApiAdapterResponse object containing the appropriate response
         """
         try:
-            response = self.command_sequencer.get(path)
+            # Decode query parameters
+            query_params = {k: [val.decode("utf-8") for val in v] for (k, v) in request.query_arguments.items()}
+
+            response = self.command_sequencer.get(path, kwargs=query_params)
             status_code = 200
         except CommandSequenceError as error:
             response = {'error': str(error)}
@@ -70,7 +73,10 @@ class CommandSequenceManagerAdapter(ApiAdapter):
         try:
             data = json_decode(request.body)
             self.command_sequencer.set(path, data)
-            response = self.command_sequencer.get(path)
+            if path != 'last_message_timestamp':
+                response = self.command_sequencer.get(path)
+            else:
+                response = {'status': 'updated'}
             status_code = 200
         except CommandSequenceError as error:
             response = {'error': str(error)}

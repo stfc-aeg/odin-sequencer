@@ -9,6 +9,7 @@ let execution_text = document.getElementById("execution-status-text");
 let execution_progress = document.getElementById("execution-progress");
 let execution_progress_bar = document.getElementById("execution-progress-bar");
 let execution_status_progress = document.getElementById("execution-status-progress");
+var changing_params = {};
 
 const ALERT_ID = {
     'sequencer_error': '#command-sequencer-error-alert',
@@ -62,6 +63,7 @@ document.addEventListener("DOMContentLoaded", function () {
         display_alert(ALERT_ID['sequencer_error'], error.message);
     });
 });
+
 
 /**
  * This is called when a change in the Detect Changes toggle is detected. Depending on
@@ -192,6 +194,7 @@ function execute_sequence(button) {
     if (!is_empty_object(params)) {
         
         data = get_input_parameter_values(params);
+        alert_id = ALERT_ID['sequencer_error'];
         
         sequencer_endpoint.put(data, `sequence_modules/${seq_module_name}/${seq_name}`)
         .then(() => {
@@ -207,7 +210,7 @@ function execute_sequence(button) {
                     alert_message = alert_message.substring(alert_message.lastIndexOf(':') + 2);
                 }
 
-                display_alert(`#${seq_name}-alert`, alert_message);
+                display_alert(alert_id, alert_message);
             });
 
             setTimeout(await_execution_complete, 250);
@@ -223,7 +226,7 @@ function execute_sequence(button) {
             }
 
             display_log_messages();
-            display_alert(`#${seq_name}-alert`, alert_message);
+            display_alert(alert_id, alert_message);
         });
 
     } else {
@@ -233,7 +236,7 @@ function execute_sequence(button) {
         sequencer_endpoint.put({ 'execute': seq_name })
         .catch(error => {
             alert_message = error.message;
-            display_alert(`#${seq_name}-alert`, alert_message);
+            display_alert(alert_id, alert_message);
         });
 
         setTimeout(await_execution_complete, 250);
@@ -247,10 +250,10 @@ function execute_sequence(button) {
  * input box contains the name of the parameter. It calls the parse_parameter_value
  * function if the parameter type is not of type string.
  */
-function get_input_parameter_values(params) {
+function get_input_parameter_values(params, seq) {
     data = {};
     for (param in params) {
-        param_val = document.querySelector(`#${seq_name}-${param}-input`).value;
+        param_val = document.querySelector(`#${seq_name}-${param}`).value;
         param_type = params[param]['type'];
 
         if (param_type != 'str') {
@@ -262,6 +265,35 @@ function get_input_parameter_values(params) {
 
     return data;
 }
+
+function getNestedProperty(obj, path) {
+    return path.split('.').reduce((acc, part) => acc && acc[part], obj)
+}
+
+function save_changes(seq, seq_module) {
+
+    seq_module = getNestedProperty(sequence_modules, seq_module)
+    params = getNestedProperty(seq_module, seq)
+
+    for (param in params) {
+        params[param].value = (document.querySelector(`#${seq}-${param}`)).value
+    }
+}
+
+function cancel_changes(seq, seq_module) {
+
+    first_seq_module = getNestedProperty(sequence_modules, seq_module)
+    first_params = getNestedProperty(first_seq_module, seq)
+   
+    for (param in first_params) {
+        (document.querySelector(`#${seq}-${param}`)).value = first_params[param].value
+    }
+}
+
+function params_checker() {
+    changing_params = sequence_modules
+}
+
 
 /**
  * This function parses the parameter value from string to the correct type.
@@ -370,7 +402,7 @@ function display_execution(sequence_name)
 }
 
 /*
- * This function hides the eexcution progress elements on the UI
+ * This function hides the excution progress elements on the UI
  */
 function hide_execution()
 {
@@ -472,28 +504,30 @@ function build_sequence_modules_layout() {
     .then(result => {
         
         sequence_modules = result.sequence_modules;
+
         if (!is_empty_object(sequence_modules)) {
-            // Sort the modules in alphabetical order
+            // Sorts the modules in alphabetical order
             sequence_modules = Object.fromEntries(Object.entries(sequence_modules).sort());
-            let html_text = `<div id="accordion" role="tablist">`;
+            let html_text = `<div class="accordion" id="module-accordion">`;
+
+            // Creates an accordion-item for every sequence module
             for (seq_module in sequence_modules) {
                 sequences = sequence_modules[seq_module];
 
                 html_text += `
-                <div class="row border">
-                    <div class="col-md-12">
-                        <div class="row">
-                            <div class="col-md-12 text-center">
-                                <h4><b>${seq_module}</b></h4>
-                            </div>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-md-12">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="${seq_module}-acc">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#${seq_module}-collapse" aria-expanded="true" aria-controls="collapse-${seq_module}">
+                                ${seq_module}
+                            </button>
+                        </h2>
+                        <div id="collapse-${seq_module}" class="accordion-collapse collapse show" aria-labelledby="${seq_module}-acc" data-bs-parent="#module-accordian"
+                            <div class="accordion-body">
                                 ${build_sequences_layout(seq_module, sequences)}
                             </div>
                         </div>
                     </div>
-                </div>`;
+                    </div>`;
             }
 
             html_text += '</div>';
@@ -510,43 +544,70 @@ function build_sequence_modules_layout() {
  * element if the sequence has parameters. 
  */
 function build_sequences_layout(seq_module, sequences) {
-    html_text = '';
+    let html_text = `
+    <div id="${seq_module}-collapse" class="collapse" role="tabpanel" aria-labelledby="${seq_module}-heading" data-parent="#accordion" style="padding: 0px">
+        <div class="row">
+        `;
+
+    // Creates a card for every sequence within a module
     for (seq in sequences) {
         params = sequences[seq];
 
-        html_text += `
-        <div class="card">
-            <div class="card-header" role="tab" id="${seq}-heading">
-                <div class="row">
-                    <div class="col-md-5">
-                        <h5>`;
+        sequence_params_layout = build_sequence_parameters_layout(seq, params)
 
-        sequence_params_layout = '';
-        if (is_empty_object(params)) {
-            html_text += `${seq}`;
+        html_text +=    `<div class="col col-card" style="padding:0;">
+                        <div class="row">
+                        <div class="card card-new" style="padding:0px">
+                            <div class="card-body" style="padding:4px">
+                                <h6 class="card-title text-center">${String(seq).replaceAll("_", " ")}</h6>
+                                <div class="row" style="padding:0px">
+                        `
+
+        // Only creates a parameters modal if there are parameters to be changed
+        if (!is_empty_object(params)) {
+            html_text += `<div class="col" style="padding:0">
+                            <button type="button" data-bs-toggle="modal" data-bs-target="#${seq_module}-${seq}-modal" onclick="params_checker()" class="btn btn-info">Parameters</button>
+                            <div class="modal" id="${seq_module}-${seq}-modal" tabindex="-1" role="dialog" aria-labelledby="${seq_module}-${seq}-modal-label" aria-hidden="true" style="height: 500px">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <div class="modal-title" id="${seq_module}-${seq}-modal-label">${seq}</div>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="close" onclick="cancel_changes(${("'"+String(seq)+"'")}, ${"'"+String(seq_module)+"'"})"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            ${sequence_params_layout}
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="cancel_changes(${("'"+String(seq)+"'")}, ${"'"+String(seq_module)+"'"})">Close</button>
+                                            <button type="button" class="btn btn-primary" data-bs-dismiss="modal" onclick="save_changes(${("'"+String(seq)+"'")}, ${"'"+String(seq_module)+"'"})">Save Changes</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>`
         } else {
-            html_text += `
-            <a data-bs-toggle="collapse" href="#${seq}-collapse" aria-expanded="false"
-               aria-controls="${seq}-collapse" class="collapsed">
-                ${seq}
-            </a>`;
-            sequence_params_layout = build_sequence_parameters_layout(seq, params);
+            html_text += `<div class="col">
+                        </div>`            
         }
 
-        html_text += `
-                        </h5>
-                    </div>
-                    <div class="col-md-5">
-                        <div class="sequence-alert alert alert-danger mb-0 d-none" role="alert" id="${seq}-alert"></div>
-                    </div>
-                    <div class="col-md-2">
-                        <button type="submit" class="btn btn-primary execute-btn mb-3" onclick="execute_sequence(this)" id="${seq_module}-${seq}-execute-btn">Execute</button>
+
+        html_text +=   `<div class="col" style="padding:0">
+                            <div class="row justify-content-end">
+
+                            <button type="button" data-bs-dismiss="modal" class="btn btn-success btn-width" onclick="execute_sequence(this)" id="${seq_module}-${seq}-execute-btn">Execute</button>
+                        </div>
+                        </div>
                     </div>
                 </div>
+                </div>
             </div>
-            ${sequence_params_layout}
-        </div>`;
-    }
+        </div>
+        `    
+    }   
+    html_text += `
+        </div>
+    </div>
+        `
 
     return html_text;
 }
@@ -556,10 +617,11 @@ function build_sequences_layout(seq_module, sequences) {
  * tooltip is added next to the parameter name label for all list parameters which
  * provides information to users about how they need to input the list elements.
  */
+
 function build_sequence_parameters_layout(seq, params) {
-    let html_text = `
-    <div id="${seq}-collapse" class="collapse" role="tabpanel" aria-labelledby="${seq}-heading" data-parent="#accordion">
-        <div class="card-body">`;
+
+    let html_text = ``
+
     for (param in params) {
         attributes = params[param];
         param_type = attributes['type'];
@@ -567,8 +629,8 @@ function build_sequence_parameters_layout(seq, params) {
 
         html_text += `
         <div class="row">
-            <div class="col-md-2">
-                <label for="${seq}-${param}-input">${param} (${param_type})</label>`;
+            <div class="col-md-4">
+                <label for="${seq}-${param}">${param} (${param_type})</label>`;
 
         if (param_type.startsWith('list')) {
             html_text += '<i class="far fa-question-circle fa-fw my-tooltip" title="Enter elements as a comma separate string and do not include quotes or square brackets"></i>';
@@ -576,27 +638,23 @@ function build_sequence_parameters_layout(seq, params) {
 
         html_text += `
         </div>
-        <div class="col-md-10">`;
+        <div class="col-md-8">`;
 
         if (param_type == 'bool') {
             html_text += `
-            <select class="form-control mb-3" id="${seq}-${param}-input">
+            <select class="form-control mb-3" id="${seq}-${param}">
                 <option>False</option>
                 <option>True</option>
             </select>`;
         } else {
             input_type = (param_type == 'int' || param_type == 'float') ? 'number' : 'text';
-            html_text += `<input type="${input_type}" value="${param_default_value}" class="form-control mb-3" id="${seq}-${param}-input" />`;
+            html_text += `<input type="${input_type}" value="${param_default_value}" class="form-control mb-3" id="${seq}-${param}" />`;
         }
 
         html_text += `
-            </div>
+        </div>
         </div>`;
     }
-
-    html_text += `
-        </div>
-    </div>`;
 
     return html_text;
 }

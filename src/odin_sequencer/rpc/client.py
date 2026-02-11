@@ -126,8 +126,9 @@ class OdinSequencerClient:
         response = None
         poll_timeout = 100
         poll_elapsed = 0
+        done = False
 
-        while response is None:
+        while not done:
             socks = dict(self.poller.poll(poll_timeout))
             poll_elapsed += poll_timeout
             if self.ctrl_socket in socks and socks[self.ctrl_socket] == zmq.POLLIN:
@@ -136,6 +137,8 @@ class OdinSequencerClient:
             if self.log_socket in socks and socks[self.log_socket] == zmq.POLLIN:
                 msg = self.log_socket.recv_multipart()
                 self.handle_log_message(msg)
+            elif response is not None:
+                done = True
             if timeout and poll_elapsed >= timeout:
                 raise TimeoutError("Timeout waiting for response from sequencer")
         return response

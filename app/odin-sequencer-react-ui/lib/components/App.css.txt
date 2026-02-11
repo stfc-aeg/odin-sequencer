@@ -1,0 +1,175 @@
+.execute-btn {
+    float: right;
+}
+
+.card-header {
+    color: #007bff;
+}
+
+.pre-scrollable {
+    background-color: #f7f7f7;
+    border: 1px solid black;
+    white-space: pre-wrap;
+    height: 600px
+}
+
+.sticky{
+    height: 100%;
+    width: 48%;
+    float:right;
+    position: fixed;
+}
+
+.custom-row-border{
+    margin-right:0px;
+    margin-left: 0px;
+}
+
+.row{
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+}
+
+.accordion-button{
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+}
+
+.accordion-body {
+    padding: 0px !important;
+}
+
+.btn-info, .btn-success{
+    line-height: 1rem !important;
+    font-size: 0.8rem !important;
+    height: 24px !important;
+    padding-left: 0.1rem !important;
+    padding-right: 0.1rem !important;
+    padding-top: 0.1rem !important;
+    padding-bottom: 0.1rem !important;
+}
+
+.btn-info {
+    float: left;
+}
+
+.card-new{
+    max-width: 170px;
+    min-width: 210px;
+}
+
+.col-card {
+    padding-top: 4px;
+    max-width: 220px;
+}
+
+.btn-width {
+    width: 58px;
+}
+
+.alert-bar {
+    padding-top: 18px;
+}
+
+.card-title {
+    font-size: 0.9rem !important;
+    text-align: center;
+}
+
+.card-body {
+    border-radius: 0px;
+    padding: 4px !important;
+    width: 184px;
+    height: 55px;
+}
+
+.card {
+    max-width: 184px;
+}
+
+.col {
+    max-width: 184px !important;
+    padding-left: 0px !important;
+    padding-right: 0px !important;
+}
+
+.flex-container {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.left {
+    width: 58%;
+    min-width: 400px;
+    padding-right: 12px;
+    padding-left: 24px;
+}
+
+.right {
+    width: 42%;
+    padding-left: 24px;
+    padding-right: 12px;
+}
+
+.col-sm-7 {
+    width: 100% !important;
+}
+
+@media (max-width: 768px) {
+    .left, .right {
+        width: 100%;
+    }
+}
+
+.button-row {
+    display: flex;
+    justify-content: flex-end;
+    width: 90%;
+    gap: 50px;
+    margin: 0 auto;
+}
+
+.alert-box {
+    position: sticky;
+    z-index: 1040;
+    padding-top: 18px;
+    padding-left: 12px;
+    padding-right: 12px;
+}
+
+.progress-container {
+    margin-left: 15px;
+    position: sticky;
+    top: 0;
+    z-index: 1050;
+    background-color: white;
+}
+
+.ui-card {
+    margin-top: 20px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    background-color: #fff;
+}
+
+.ui-card-header {
+    background-color: #f5f5f5;
+    padding: 8px 12px;
+    border-bottom: 1px solid #ddd;
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.ui-card-body {
+    padding: 8px;
+}
+
+.message-box {
+    height: 100%;
+    width: 100%;
+    overflow-y: auto;
+}
