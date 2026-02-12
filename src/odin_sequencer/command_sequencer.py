@@ -150,7 +150,7 @@ class CommandSequencer:
         try:
             self.param_tree.set(path, data)
         except ParameterTreeError as error:
-            self.log(error, level="error")
+            self.log(str(error), level="error")
             raise CommandSequenceError(error)
 
     def set_detect_module_modifications(self, detect_module_modifications):
@@ -380,8 +380,11 @@ class CommandSequencer:
         The method also supports a level argument to specify a log level.
         """
         timestamp = datetime.now()
-        if not level:
-            level = 'info'
+
+        # Default level and ensuring type safety
+        level = str(level) if level else "info"
+        if not isinstance(message, str):
+            message = str(message)
         self.log_messages_deque.append((timestamp, message, level))
 
     def get_log_messages(self, last_message_timestamp):
