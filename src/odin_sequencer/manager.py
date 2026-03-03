@@ -20,6 +20,8 @@ from .exceptions import CommandSequenceError
 from .watcher import FileWatcherFactory
 from .sequence_logger import SequenceLogger
 
+import logging
+
 if sys.version_info < (3, 6, 0):  # pragma: no cover
     class ModuleNotFoundError(ImportError):  # pylint: disable=redefined-builtin
         """Derive ModuleNotFoundError exception for earlier python versions."""
@@ -250,19 +252,40 @@ class CommandSequenceManager:
         return not any(not type(element) == type(list_val[0]) for element in list_val)
 
     def _build_sequence_parameter_info(self, params):
-        """This method builds a dictionary that contains the parameter
-        names that a sequence accepts, and their type and default value.
+        """This method builds a dictionary that contains the parameter names that a sequence
+        accepts, with their type, default, and current value.
+        The current value is implemented with a lambda function to make it settable with typical
+        ParameterTree type handling.
 
         :param params: the parameter(s) to extract and build information for
         :return: a dictionary with information about the parameters that the sequence accepts
-        """
-        return {
-            param.name: {
+        """        
+        sequence_info = {}
+
+        for param in params:
+            param_info = {
                 "value": param.default,
                 "default": param.default,
                 "type": self._get_parameter_type(param.default)
-            } for param in params
-        }
+            }
+            sequence_info[param.name] = {
+                "value": (
+                    lambda p=param_info: p["value"],
+                    partial(self._set_sequence_param_value, param_info)
+                ),
+                "default": param_info["default"],
+                "type": param_info["type"]
+            }
+
+        return sequence_info
+
+    def _set_sequence_param_value(self, param_info, value):
+        """This method sets the value of a sequence parameter in the tree."""
+        if self._is_executing:
+            raise CommandSequenceError(
+                "Cannot set parameter value while sequence is executing"
+            )
+        param_info["value"] = value
 
     @staticmethod
     def _get_parameter_type(param_default_val):
