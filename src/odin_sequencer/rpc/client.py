@@ -32,7 +32,8 @@ class OdinSequencerClient:
     """
 
     def __init__(
-        self, seq_address: str, ctrl_port: int = 5555, log_port: int = 6666, emit_exceptions=True
+        self, seq_address: str, ctrl_port: int = 5555, log_port: int = 6666, emit_exceptions=True,
+        print_func=print
     ):
         """Initialize the OdinSequencerClient.
 
@@ -46,6 +47,7 @@ class OdinSequencerClient:
         self.ctrl_endpoint = f"tcp://{seq_address}:{ctrl_port}"
         self.log_endpoint = f"tcp://{seq_address}:{log_port}"
         self._emit_exceptions = emit_exceptions
+        self.print_func = print_func
 
         self.ctx = zmq.Context()
 
@@ -150,7 +152,7 @@ class OdinSequencerClient:
             msg: List of bytes representing the log message.
 
         """
-        print(" ".join((x.decode("utf-8") for x in msg)))
+        self.print_func(" ".join((x.decode("utf-8") for x in msg)))
 
     def ping_sequencer(self, timeout: int | None = None) -> bool:
         """Ping the sequencer server to check connectivity.
@@ -163,7 +165,7 @@ class OdinSequencerClient:
         try:
             ping_response = self.do_request(req, timeout=timeout)
             if ping_response is True:
-                print(f"Connected to odin-sequencer at {self.ctrl_endpoint}")
+                self.print_func(f"Connected to odin-sequencer at {self.ctrl_endpoint}")
             return True
         except TimeoutError as error:
             error_msg = (
@@ -195,7 +197,7 @@ class OdinSequencerClient:
         try:
             result = self.do_request(req)
         except KeyboardInterrupt:
-            print("Keyboard interrupt received, aborting execution")
+            self.print_func("Keyboard interrupt received, aborting execution")
             self.abort()
         return result
 
@@ -243,7 +245,7 @@ class OdinSequencerClient:
         """
         reload_request = RpcRequest(method="reload", id=self._next_id())
         result = self.do_request(reload_request)
-        print(f"Reload {'succeeded' if result else 'failed'}")
+        self.print_func(f"Reload {'succeeded' if result else 'failed'}")
 
     def emit_exceptions(self, emit_exceptions: bool):
         """Set whether to raise exceptions on RPC errors.
