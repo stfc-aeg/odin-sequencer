@@ -247,6 +247,21 @@ class OdinSequencerClient:
         result = self.do_request(reload_request)
         self.print_func(f"Reload {'succeeded' if result else 'failed'}")
 
+    def auto_reload(self, enable: bool):
+
+        auto_reload_request = RpcRequest(
+            method="auto_reload",
+            params={
+                "enable": enable
+            },
+            id=self._next_id()
+        )
+        result = self.do_request(auto_reload_request)
+        self.print_func(
+            f"{'Enabling' if enable else 'Disabling'} "
+            f"auto reload {'succeeded' if result else 'failed'}"
+        )
+
     def emit_exceptions(self, emit_exceptions: bool):
         """Set whether to raise exceptions on RPC errors.
 

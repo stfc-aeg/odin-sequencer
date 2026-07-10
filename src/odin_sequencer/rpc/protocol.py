@@ -11,7 +11,10 @@ Tim Nicholls, STFC Detector Systems Software Group
 import base64
 import json
 from dataclasses import asdict, dataclass, field, is_dataclass
-from typing import Any, ClassVar, Optional, Union
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union
+
+if TYPE_CHECKING:
+    from typing_extensions import Self
 
 # If numpy is available, add the ndarray type to the result types
 result_types = [Any]
@@ -145,7 +148,7 @@ class JsonRpcModel:
 
     JSONRPC_VERSION: ClassVar[str] = "2.0"
     jsonrpc: str = field(default=JSONRPC_VERSION, init=False)
-    id: Union[int, str]
+    id: Union[int, str, None]
 
     def encode(self) -> bytes:
         """Encode the model to a JSON-formatted UTF-8 byte string."""
@@ -170,7 +173,7 @@ class JsonRpcModel:
         obj.pop("jsonrpc", None)
 
     @classmethod
-    def decode(cls, json_bytes: bytes) -> "JsonRpcModel":
+    def decode(cls, json_bytes: bytes) -> "Self":
         """Decode a JSON-formatted UTF-8 byte string into a model instance.
 
         Parameters
@@ -304,7 +307,7 @@ class RpcErrorCode(IntEnum):
     InvalidScope = -32000
     # Error codes -32000 to -32099 are reserved for implementation-defined server errors
     AbortError = -32001
-
+    AutoreloadError = -32002
 
 @dataclass
 class ErrorParams:
@@ -372,7 +375,8 @@ class RpcResponseAdapter:
     appropriate response instance.
     """
 
-    def decode(self, json_bytes: bytes) -> Union[RpcResponse, RpcErrorResponse]:
+    @staticmethod
+    def decode(json_bytes: bytes) -> Union[RpcResponse, RpcErrorResponse]:
         """Decode a JSON-formatted UTF-8 byte string into a response or error model instance.
 
         Parameters
@@ -393,3 +397,4 @@ class RpcResponseAdapter:
             return RpcErrorResponse(**response)
         else:
             return RpcResponse(**response)
+
