@@ -110,9 +110,9 @@ class JsonRpcDecoder(json.JSONDecoder):
 
     def __init__(self, *args, **kwargs):
         """Initialize the decoder with a custom object hook."""
-        super().__init__(*args, object_hook=self.object_hook, **kwargs)
+        super().__init__(*args, object_hook=self._object_hook, **kwargs)
 
-    def object_hook(self, obj: Any) -> Any:
+    def _object_hook(self, obj: Any) -> Any:
         """Handle additional types during decoding in the custom object hook.
 
         Parameters
@@ -202,6 +202,7 @@ class ExecuteScope(StrEnum):
     SEQUENCE = "sequence"
     CONTEXT = "context"
 
+ArgsType = Union[list[Any], dict[str, Any]]
 
 @dataclass
 class ExecuteParams:
@@ -224,8 +225,8 @@ class ExecuteParams:
 
     scope: ExecuteScope
     method: str
-    context: str = None
-    args: list[Any] | dict[str, Any] = None
+    context: Optional[str] = None
+    args: Optional[ArgsType] = None
     kwargs: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
