@@ -248,7 +248,12 @@ class OdinSequencerClient:
         self.print_func(f"Reload {'succeeded' if result else 'failed'}")
 
     def auto_reload(self, enable: bool):
+        """Control the auto-reload mode of the sequencer.
 
+        Args:
+            enable: If true, enable auto reload mode.
+
+        """
         auto_reload_request = RpcRequest(
             method="auto_reload",
             params={

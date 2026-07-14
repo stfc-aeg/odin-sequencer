@@ -301,7 +301,18 @@ class RpcServer:
 
     @dispatched_method()
     def auto_reload(self, **params):
+        """Control the auto-reload mode of the sequencer.
 
+        Args:
+            **params: Parameter block, expect "enable" boolean parameter
+
+        Returns:
+            True if command succeeded.
+
+        Raises:
+            RpcServerError: If no enable parameter or there was an error from the sequencer.
+
+        """
         try:
             enable = params["enable"]
             if enable == self.manager.auto_reload:
