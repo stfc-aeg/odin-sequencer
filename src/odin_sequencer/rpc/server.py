@@ -15,6 +15,8 @@ import zmq
 from zmq.error import ZMQError
 from zmq.eventloop.zmqstream import ZMQStream
 
+from ..exceptions import CommandSequenceError
+from .exceptions import RpcServerError
 from .protocol import (
     ErrorParams,
     ExecuteParams,
@@ -22,35 +24,9 @@ from .protocol import (
     RpcErrorCode,
     RpcErrorResponse,
     RpcRequest,
-    RpcResponse,
     ValidationError,
 )
 from .util import dispatched_method
-
-
-class RpcServerError(Exception):
-    """Exception raised for errors encountered in the RPC server.
-
-    Attributes:
-        code: Error code associated with the exception.
-        message: Description of the error.
-        data: Additional data related to the error.
-
-    """
-
-    def __init__(self, code, message, data):
-        """Initialize RpcServerError with error code, message, and additional data.
-
-        Args:
-            code: Error code associated with the exception.
-            message: Description of the error.
-            data: Additional data related to the error.
-
-        """
-        super().__init__(f"{message}: {data}")
-        self.code = code
-        self.message = message
-        self.data = data
 
 
 class RpcServer:
@@ -111,6 +87,7 @@ class RpcServer:
             "execute": self.execute,
             "abort": self.abort,
             "reload": self.reload,
+            "auto_reload": self.auto_reload,
         }
 
         self.manager.register_logger(self.logger)
@@ -162,16 +139,21 @@ class RpcServer:
                     response = self.dispatcher[request.method](
                         client_id, request.id, **request.params
                     )
-                else:
+                elif isinstance(request.params, list):
                     response = self.dispatcher[request.method](
                         client_id, request.id, *request.params
                     )
+                else:
+                    response = self.dispatcher[request.method](
+                        client_id, request.id, request.params
+                    )
             except RpcServerError as e:
                 response = RpcErrorResponse(
-                    id=request.id, code=e.code, message=e.message, data=e.data
+                    id=request.id,
+                    error=ErrorParams(code=e.code, message=e.message, data=e.data)
                 )
             except Exception as e:
-                response = RpcResponse(
+                response = RpcErrorResponse(
                     id=request.id,
                     error=ErrorParams(
                         code=RpcErrorCode.InternalError, message="Internal error", data=str(e)
@@ -316,3 +298,36 @@ class RpcServer:
         self.sequencer.set_reload(True)
 
         return not self.sequencer.module_reload_failed
+
+    @dispatched_method()
+    def auto_reload(self, **params):
+        """Control the auto-reload mode of the sequencer.
+
+        Args:
+            **params: Parameter block, expect "enable" boolean parameter
+
+        Returns:
+            True if command succeeded.
+
+        Raises:
+            RpcServerError: If no enable parameter or there was an error from the sequencer.
+
+        """
+        try:
+            enable = params["enable"]
+            if enable == self.manager.auto_reload:
+                logging.debug("Auto reloading is already %s", "enabled" if self.manager.auto_reload else "disabled")
+            else:
+                logging.debug("Setting auto reload to %s", "enabled" if enable else "disabled")
+                self.manager.set_auto_reload(enable)
+        except KeyError:
+            raise RpcServerError(
+                code=RpcErrorCode.AutoreloadError, message="Auto reload error", data="no enable parameter specified"
+            )
+        except CommandSequenceError as seq_error:
+            raise RpcServerError(
+                code=RpcErrorCode.AutoreloadError, message="Auto reload error", data=str(seq_error)
+            )
+
+        return True
+

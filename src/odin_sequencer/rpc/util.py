@@ -8,7 +8,8 @@ Tim Nicholls, STFC Detector Systems Software Group.
 from functools import wraps
 from threading import Thread
 
-from .protocol import ErrorParams, RpcErrorResponse, RpcResponse
+from .exceptions import RpcServerError
+from .protocol import ErrorParams, RpcErrorCode, RpcErrorResponse, RpcResponse
 
 
 def dispatched_method(in_thread=False):
@@ -28,11 +29,23 @@ def dispatched_method(in_thread=False):
                 try:
                     result = method(_self, *args, **kwargs)
                     return RpcResponse(id=request_id, result=result)
-                except Exception as e:
+                except RpcServerError as e:
+                    print("rse")
                     return RpcErrorResponse(
                         id=request_id,
                         error=ErrorParams(
-                            code=-32603,
+                            code=e.code,
+                            message=f"RpcServerError calling method {method.__name__} "
+                                f"for client id {client_id.decode('utf-8')}",
+                                data=f"{e.message} {e.data}"
+                        ),
+                    )
+                except Exception as e:
+                    print("exc", type(e))
+                    return RpcErrorResponse(
+                        id=request_id,
+                        error=ErrorParams(
+                            code=-RpcErrorCode.InternalError,
                             message=f"Error calling method {method.__name__} "
                             f"for client id {client_id.decode('utf-8')}",
                             data=str(e),
