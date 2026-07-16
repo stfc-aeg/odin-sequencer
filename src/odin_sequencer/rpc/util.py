@@ -30,7 +30,6 @@ def dispatched_method(in_thread=False):
                     result = method(_self, *args, **kwargs)
                     return RpcResponse(id=request_id, result=result)
                 except RpcServerError as e:
-                    print("rse")
                     return RpcErrorResponse(
                         id=request_id,
                         error=ErrorParams(
@@ -41,11 +40,10 @@ def dispatched_method(in_thread=False):
                         ),
                     )
                 except Exception as e:
-                    print("exc", type(e))
                     return RpcErrorResponse(
                         id=request_id,
                         error=ErrorParams(
-                            code=-RpcErrorCode.InternalError,
+                            code=RpcErrorCode.InternalError,
                             message=f"Error calling method {method.__name__} "
                             f"for client id {client_id.decode('utf-8')}",
                             data=str(e),
