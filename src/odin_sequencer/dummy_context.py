@@ -1,4 +1,4 @@
-"""Demo adapter for ODIN sequencer 
+"""Demo adapter for ODIN sequencer
 
 This class implements a simple adapter used for demonstrating how a context can be
 added to the odin sequencer.
@@ -7,7 +7,7 @@ Rhys Evans, STFC
 """
 import logging
 
-from odin.adapters.adapter import ApiAdapter, ApiAdapterResponse, request_types, response_types
+from odin_control.adapters.adapter import ApiAdapter, ApiAdapterResponse, request_types, response_types
 
 
 class DummyContextAdapter(ApiAdapter):
@@ -92,7 +92,7 @@ class DummyContextAdapter(ApiAdapter):
 
         self.adapters = dict((k, v) for k, v in adapters.items() if v is not self)
         logging.debug("Received following dict of Adapters: %s", self.adapters)
-        
+
         test_device = TestDevice(123)
         self.adapters['odin_sequencer'].add_context('test_device', test_device)
         logging.debug("Test device context added to odin sequencer.")

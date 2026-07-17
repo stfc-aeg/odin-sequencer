@@ -11,7 +11,7 @@ import threading
 from collections import deque
 from datetime import datetime
 from odin_sequencer import CommandSequenceManager, CommandSequenceError
-from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
+from odin_control.adapters.parameter_tree import ParameterTree, ParameterTreeError
 
 
 class CommandSequencer:
@@ -91,7 +91,7 @@ class CommandSequencer:
         of the outcome of the reloading process (i.e. adding information about any new sequences
         that were added in the loaded module or vice versa).
         """
-       
+
         return ParameterTree(
             {
                 "sequence_modules": self.sequence_modules,
@@ -132,7 +132,7 @@ class CommandSequencer:
             # Use query parameter if present
             timestamp = kwargs.get("last_message_timestamp", [""])[0] if kwargs else ""
             return self.get_log_messages(timestamp)
-        
+
         try:
             return self.param_tree.get(path)
         except ParameterTreeError as error:
@@ -212,7 +212,8 @@ class CommandSequencer:
             self.param_tree = self._build_param_tree()
             return
 
-        sequence_modules = self.param_tree.get("sequence_modules")["sequence_modules"]
+        sequence_modules = self.param_tree.get("sequence_modules")
+
         if not sequence_modules:
             raise CommandSequenceError(
                 "Cannot start the reloading process as there are no sequence modules loaded"
@@ -292,7 +293,7 @@ class CommandSequencer:
                 "Cannot execute command sequence while the reloading process is in progress"
             )
 
-        sequence_modules = self.param_tree.get("sequence_modules")["sequence_modules"]
+        sequence_modules = self.param_tree.get("sequence_modules")
         if not any(seq_name in seq_module for seq_module in sequence_modules.values()):
             raise CommandSequenceError("Missing command sequence: {}".format(seq_name))
 
@@ -372,7 +373,7 @@ class CommandSequencer:
                 return True
         except ValueError as error:
             raise CommandSequenceError('Empty process task list while trying to remove group {} and task {}'.format(group_uuid, task_uuid))
-    
+
     def log(self, message, level):
         """This method is registered as a logger with the manager. Doing this results
         in all the print or log messages in the loaded sequences to be passed to this method. The method

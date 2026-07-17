@@ -7,7 +7,7 @@ Viktor Bozhinov, STFC.
 import logging
 
 from tornado.escape import json_decode
-from odin.adapters.adapter import ApiAdapter, ApiAdapterResponse, request_types, response_types
+from odin_control.adapters.adapter import ApiAdapter, ApiAdapterResponse, request_types, response_types
 
 from odin_sequencer import CommandSequenceError
 from .command_sequencer import CommandSequencer
