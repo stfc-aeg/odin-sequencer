@@ -1,0 +1,3 @@
+[submodule "odin-sequencer-ui"]
+	path = odin-sequencer-ui
+	url = https://github.com/stfc-aeg/odin-sequencer-ui.git
