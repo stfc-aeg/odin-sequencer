@@ -10,7 +10,7 @@ from tornado.escape import json_decode
 from odin_control.adapters.adapter import ApiAdapter, ApiAdapterResponse, request_types, response_types
 
 from odin_sequencer import CommandSequenceError
-from .command_sequencer import CommandSequencer
+from .controller import SequencerController
 
 
 class CommandSequenceManagerAdapter(ApiAdapter):
@@ -29,7 +29,7 @@ class CommandSequenceManagerAdapter(ApiAdapter):
         super(CommandSequenceManagerAdapter, self).__init__(**kwargs)
 
         # Initalise command sequencer
-        self.command_sequencer = CommandSequencer(self.options)
+        self.controller = SequencerController(self.options)
 
         logging.debug('CommandSequenceManagerAdapter loaded')
 
@@ -48,7 +48,7 @@ class CommandSequenceManagerAdapter(ApiAdapter):
             # Decode query parameters
             query_params = {k: [val.decode("utf-8") for val in v] for (k, v) in request.query_arguments.items()}
 
-            response = self.command_sequencer.get(path, kwargs=query_params)
+            response = self.controller.get(path, kwargs=query_params)
             status_code = 200
         except CommandSequenceError as error:
             response = {'error': str(error)}
@@ -72,9 +72,9 @@ class CommandSequenceManagerAdapter(ApiAdapter):
         """
         try:
             data = json_decode(request.body)
-            self.command_sequencer.set(path, data)
+            self.controller.set(path, data)
             if path != 'last_message_timestamp':
-                response = self.command_sequencer.get(path)
+                response = self.controller.get(path)
             else:
                 response = {'status': 'updated'}
             status_code = 200
@@ -95,10 +95,10 @@ class CommandSequenceManagerAdapter(ApiAdapter):
         :param name: Name of context
         :param obj: Context object
         """
-        self.command_sequencer._add_context(name, obj)
+        self.controller._add_context(name, obj)
 
     def start_process_monitor(self, process_monitor):
         """This method starts the process monitor thread.
         :param obj: process monitor object
         """
-        self.command_sequencer._start_process_monitor(process_monitor)
+        self.controller._start_process_monitor(process_monitor)

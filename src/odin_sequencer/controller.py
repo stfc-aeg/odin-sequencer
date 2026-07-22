@@ -1,4 +1,4 @@
-"""CommandSequencer module
+"""SequencerController module
 
 Module which facilitates communication to the command sequencer manager.
 
@@ -14,16 +14,16 @@ from odin_sequencer import CommandSequenceManager, CommandSequenceError
 from odin_control.adapters.parameter_tree import ParameterTree, ParameterTreeError
 
 
-class CommandSequencer:
-    """CommandSequencer object representing the command sequencer manager.
+class SequencerController:
+    """SequencerController object representing the command sequencer manager.
 
     Facilitates communcation to the command sequence manager.
     """
 
     def __init__(self, options):
-        """Initialise the CommandSequencer object.
+        """Initialise the SequencerController object.
 
-        This constructor initialises the CommandSequencer object, creating a command
+        This constructor initialises the SequencerController object, creating a command
         sequencer manager, and building a parameter tree for it which allows clients
         to communicate with the manager.
         """
@@ -66,8 +66,8 @@ class CommandSequencer:
 
     def _initialise_manager(self, raise_on_error=False):
         """Initialises the command sequence manager and sets up paramters accordingly. This is
-        called during initialisation of the CommandSequencer or subsequently on reload if the
-        manager has not been correctly initialised before. This allows the CommandSequencer to
+        called during initialisation of the SequencerController or subsequently on reload if the
+        manager has not been correctly initialised before. This allows the SequencerController to
         instantiate a valid manager even if there are errors in the sequences.
         """
 

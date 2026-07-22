@@ -1,7 +1,7 @@
 import time
 import pytest
 
-from src.odin_sequencer.command_sequencer import CommandSequencer
+from src.odin_sequencer.controller import SequencerController
 from odin_sequencer import CommandSequenceManager, CommandSequenceError
 from .testutils import (modify_test_reload_module_file, modify_test_reload_module_file_syntax_error,
                         modify_with_dependency_module_file, get_last_modified_file_time,
@@ -18,7 +18,7 @@ def create_command_sequencer(create_paths):
             paths = create_paths(files_or_directories)
 
         options = {"sequence_location": paths}
-        return CommandSequencer(options)
+        return SequencerController(options)
 
     return _create_command_sequencer
 
