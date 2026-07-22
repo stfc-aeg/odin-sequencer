@@ -4,34 +4,19 @@ Adapter which exposes the underlying Command sequence manager module
 
 Viktor Bozhinov, STFC.
 """
-import logging
+from odin_control.adapters.adapter import ApiAdapter, ApiAdapterResponse, response_types
 
-from tornado.escape import json_decode
-from odin_control.adapters.adapter import ApiAdapter, ApiAdapterResponse, request_types, response_types
-
-from odin_sequencer import CommandSequenceError
+from odin_sequencer import SequencerError
 from .controller import SequencerController
 
 
-class CommandSequenceManagerAdapter(ApiAdapter):
+class SequencerAdapter(ApiAdapter):
     """ ApiAdapter for the Command Sequencer.
 
     Adapter which exposes the underlying Command Sequencer.
     """
-
-    def __init__(self, **kwargs):
-        """Initialise the CommandSequenceManagerAdapter object.
-
-        This constructor initialises the CommandSequenceManagerAdapter object.
-        :param kwargs: keyword arguments specifying options
-        """
-        # Initialise superclass
-        super(CommandSequenceManagerAdapter, self).__init__(**kwargs)
-
-        # Initalise command sequencer
-        self.controller = SequencerController(self.options)
-
-        logging.debug('CommandSequenceManagerAdapter loaded')
+    controller_cls = SequencerController
+    error_cls = SequencerError
 
     @response_types('application/json', default='application/json')
     def get(self, path, request):
@@ -47,42 +32,10 @@ class CommandSequenceManagerAdapter(ApiAdapter):
         try:
             # Decode query parameters
             query_params = {k: [val.decode("utf-8") for val in v] for (k, v) in request.query_arguments.items()}
-
             response = self.controller.get(path, kwargs=query_params)
             status_code = 200
-        except CommandSequenceError as error:
+        except SequencerError as error:
             response = {'error': str(error)}
-            status_code = 400
-
-        content_type = 'application/json'
-
-        return ApiAdapterResponse(response, content_type=content_type,
-                                  status_code=status_code)
-
-    @request_types('application/json')
-    @response_types('application/json', default='application/json')
-    def put(self, path, request):
-        """Handle an HTTP PUT request.
-
-        This method handles an HTTP PUT request, returning a JSON response.
-
-        :param path: URI path of request
-        :param request: HTTP request object
-        :return: an ApiAdapterResponse object containing the appropriate response
-        """
-        try:
-            data = json_decode(request.body)
-            self.controller.set(path, data)
-            if path != 'last_message_timestamp':
-                response = self.controller.get(path)
-            else:
-                response = {'status': 'updated'}
-            status_code = 200
-        except CommandSequenceError as error:
-            response = {'error': str(error)}
-            status_code = 400
-        except (TypeError, ValueError) as error:
-            response = {'error': 'Failed to decode PUT request body: {}'.format(str(error))}
             status_code = 400
 
         content_type = 'application/json'

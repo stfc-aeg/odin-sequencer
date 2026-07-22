@@ -1,4 +1,4 @@
-# Command sequences for testing CommandSequenceManager without a provides statement
+# Command sequences for testing SequenceManager without a provides statement
 
 def default_read():
 

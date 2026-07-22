@@ -2,8 +2,8 @@ import json
 
 from unittest.mock import Mock, MagicMock, patch
 
-from odin_sequencer import CommandSequenceError
-from src.odin_sequencer.adapter import CommandSequenceManagerAdapter
+from odin_sequencer import SequencerError
+from src.odin_sequencer.adapter import SequencerAdapter
 import pytest
 
 @pytest.fixture
@@ -25,11 +25,11 @@ def context_object():
 
     return ContextObject(255374)
 
-class TestCommandSequenceManagerAdapter:
+class TestSequencerAdapter:
 
     @classmethod
     def setup_class(cls):
-        cls.adapter = CommandSequenceManagerAdapter()
+        cls.adapter = SequencerAdapter()
         cls.command_sequencer_mock = MagicMock()
         cls.adapter.command_sequencer = cls.command_sequencer_mock
         cls.request = Mock()
@@ -48,7 +48,7 @@ class TestCommandSequenceManagerAdapter:
 
     def test_get_invalid_path(self):
         invalid_path = 'invalid_path'
-        self.command_sequencer_mock.get.side_effect = CommandSequenceError(
+        self.command_sequencer_mock.get.side_effect = SequencerError(
             'Invalid path: {}'.format(invalid_path))
 
         response = self.adapter.get('invalid/path', self.request)
@@ -75,7 +75,7 @@ class TestCommandSequenceManagerAdapter:
 
     def test_put_invalid_path(self):
         invalid_path = 'invalid_path'
-        self.command_sequencer_mock.set.side_effect = CommandSequenceError(
+        self.command_sequencer_mock.set.side_effect = SequencerError(
             'Invalid path: {}'.format(invalid_path))
         request_body = {'key': 'value'}
         self.request.body = json.dumps(request_body)

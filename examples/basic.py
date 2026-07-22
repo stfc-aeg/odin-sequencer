@@ -22,7 +22,7 @@ def main():
         'sequences/spi_commands.py', 'sequences/example_sequences.py'
     ]]
 
-    csm = odin_sequencer.CommandSequenceManager(paths)
+    csm = odin_sequencer.SequenceManager(paths)
 
     test_device = TestDevice(123)
     csm.add_context('test_device', test_device)

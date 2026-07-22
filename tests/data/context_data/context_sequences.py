@@ -1,4 +1,4 @@
-# Basic command sequences for testing context use in CommandSequenceManager
+# Basic command sequences for testing context use in SequenceManager
 
 provides = ['context_access', 'missing_context_obj']
 

@@ -1,4 +1,4 @@
-# Command sequences for testing CommandSequenceManager with a mismatched provides statement
+# Command sequences for testing SequenceManager with a mismatched provides statement
 
 provides = ['default_read', 'default_write', 'missing_sequence']
 def default_read():

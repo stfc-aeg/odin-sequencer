@@ -1,4 +1,4 @@
-from odin_sequencer import CommandSequenceManager
+from odin_sequencer import SequenceManager
 from pathlib import Path
 
 
@@ -11,7 +11,7 @@ def main():
         'dependencies/d.py', 'dependencies/e.py', 'dependencies/f.py'
     ]]
 
-    csm = CommandSequenceManager(paths)
+    csm = SequenceManager(paths)
 
     csm.execute('f_one')
 

@@ -1,4 +1,4 @@
-# Basic command sequences for testing CommandSequenceManager
+# Basic command sequences for testing SequenceManager
 
 provides = ['basic_read', 'basic_write', 'basic_return_value']
 

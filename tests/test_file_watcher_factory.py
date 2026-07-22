@@ -6,7 +6,7 @@ the separate thread on which the file watcher runs is stopped.
 
 import pytest
 from odin_sequencer import (FileWatcherFactory, InotifyFileWatcher,
-                            StandaloneFileWatcher, CommandSequenceError)
+                            StandaloneFileWatcher, SequencerError)
 import odin_sequencer.watcher as watcher
 
 
@@ -82,7 +82,7 @@ def test_create_file_watcher_with_not_implemented_name():
     factory class raises an error appropriately.
     """
     with pytest.raises(
-            CommandSequenceError, match='The requested file watcher cannot be created '
+            SequencerError, match='The requested file watcher cannot be created '
                                         'because it has not been implemented'
     ):
         FileWatcherFactory.create_file_watcher(name='notimplemented')
@@ -123,7 +123,7 @@ def test_create_file_watcher_with_inotify_as_name_and_without_inotify_imported()
     watcher.INOTIFY_IMPORTED = False
 
     with pytest.raises(
-            CommandSequenceError, match='The requested file watcher cannot be created '
+            SequencerError, match='The requested file watcher cannot be created '
                                         'because the inotify module could not be found'
     ):
         FileWatcherFactory.create_file_watcher(name='inotify')

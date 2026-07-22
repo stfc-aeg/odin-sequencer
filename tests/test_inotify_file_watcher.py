@@ -8,7 +8,7 @@ that the separate thread on which the file watcher runs is stopped.
 """
 
 import pytest
-from odin_sequencer import InotifyFileWatcher, CommandSequenceError
+from odin_sequencer import InotifyFileWatcher, SequencerError
 from .testutils import (modify_test_reload_module_file, modify_with_dependency_module_file,
                         await_queue_size, get_last_modified_file_time, was_file_modified)
 
@@ -151,7 +151,7 @@ def test_stop_when_file_watcher_is_not_started(make_file_watcher):
     file_watcher = make_file_watcher()
 
     with pytest.raises(
-            CommandSequenceError, match='Cannot stop file watcher as it has not been started'
+            SequencerError, match='Cannot stop file watcher as it has not been started'
     ):
         file_watcher.stop()
 
@@ -179,7 +179,7 @@ def test_run_when_file_watcher_is_started(make_file_watcher, create_tmp_module_f
     file_watcher = make_file_watcher(tmp_files)
 
     with pytest.raises(
-            CommandSequenceError, match='File watcher has already been started'
+            SequencerError, match='File watcher has already been started'
     ):
         file_watcher.run()
 
