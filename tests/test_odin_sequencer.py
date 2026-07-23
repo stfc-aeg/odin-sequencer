@@ -85,7 +85,9 @@ def test_basic_manager_loaded(make_seq_manager):
     assert len(basic_return_value_seq_params) == 1
     assert basic_return_value_seq_params['value']['default'] == 0
     assert basic_return_value_seq_params['value']['type'] == 'int'
-    assert basic_return_value_seq_params['value']['value'] == 0
+    # Values are not accessed directly anymore. value is a lambda: getter, setter
+    getter = basic_return_value_seq_params['value']['value'][0]
+    assert getter() == 0
     assert hasattr(manager, 'basic_read')
     assert hasattr(manager, 'basic_write')
 
@@ -926,7 +928,9 @@ def test_access_context_in_sequence(make_seq_manager, context_object):
     assert len(context_access_seq_params) == 1
     assert context_access_seq_params['value']['default'] == 0
     assert context_access_seq_params['value']['type'] == 'int'
-    assert context_access_seq_params['value']['value'] == 0
+    # Values are not accessed directly anymore. value is a lambda: getter, setter
+    getter = context_access_seq_params['value']['value'][0]
+    assert getter() == 0
 
 
 def test_get_missing_context_object(make_seq_manager):

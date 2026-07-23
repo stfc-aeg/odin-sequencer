@@ -53,7 +53,7 @@ def test_command_sequencer_with_no_paths(create_command_sequencer):
 
     assert type(command_sequencer.manager) == SequenceManager
     assert len(command_sequencer.path_or_paths) == 0
-    assert len(command_sequencer.param_tree.get('sequence_modules')['sequence_modules']) == 0
+    assert len(command_sequencer.param_tree.get('sequence_modules')) == 0
 
 
 def test_command_sequencer_with_paths(create_command_sequencer, create_paths):
@@ -62,7 +62,7 @@ def test_command_sequencer_with_paths(create_command_sequencer, create_paths):
 
     command_sequencer = create_command_sequencer(file)
 
-    seq_modules = command_sequencer.param_tree.get('sequence_modules')['sequence_modules']
+    seq_modules = command_sequencer.param_tree.get('sequence_modules')
     assert type(command_sequencer.path_or_paths) == list
     assert len(command_sequencer.path_or_paths) == 1
     assert file_path in command_sequencer.path_or_paths
@@ -77,7 +77,7 @@ def test_get_param(create_command_sequencer):
     detect_module_modifications = command_sequencer.get('detect_module_modifications')
 
     assert type(detect_module_modifications) == dict
-    assert detect_module_modifications['detect_module_modifications'] is False
+    assert detect_module_modifications['value'] is False
 
 
 def test_get_missing_param(create_command_sequencer):
@@ -96,7 +96,7 @@ def test_set_param(create_command_sequencer):
     command_sequencer.set('detect_module_modifications', True)
     detect_module_modifications = command_sequencer.get('detect_module_modifications')
 
-    assert detect_module_modifications['detect_module_modifications'] is True
+    assert detect_module_modifications['value'] is True
 
     command_sequencer.set('detect_module_modifications', False)
 
@@ -117,7 +117,7 @@ def test_set_detect_module_modifications_to_true(create_command_sequencer):
 
     command_sequencer.set_detect_module_modifications(True)
     detect_module_modifications = command_sequencer.get('detect_module_modifications')[
-        'detect_module_modifications']
+        'value']
 
     assert detect_module_modifications is True
     assert command_sequencer.manager.module_watching is True
@@ -158,7 +158,7 @@ def test_set_detect_module_modifications_to_false(create_command_sequencer):
 
     command_sequencer.set_detect_module_modifications(False)
     detect_module_modifications = command_sequencer.get('detect_module_modifications')[
-        'detect_module_modifications']
+        'value']
 
     assert detect_module_modifications is False
     assert command_sequencer.manager.module_watching is False
@@ -225,7 +225,7 @@ def test_set_reload_to_true_when_detect_module_modifications_disabled(shared_dat
 
     command_sequencer.set_reload(True)
 
-    seq_modules = command_sequencer.param_tree.get('sequence_modules')['sequence_modules']
+    seq_modules = command_sequencer.param_tree.get('sequence_modules')
     assert command_sequencer.module_reload_failed is False
     assert len(seq_modules[module_name]) == 2
     assert new_seq_name in seq_modules[module_name]
@@ -252,7 +252,7 @@ def test_set_reload_to_true_when_detect_module_modifications_enabled(shared_data
         await_queue_size(command_sequencer.manager.module_watcher, 1)
         command_sequencer.set_reload(True)
 
-        seq_modules = command_sequencer.param_tree.get('sequence_modules')['sequence_modules']
+        seq_modules = command_sequencer.param_tree.get('sequence_modules')
         assert command_sequencer.module_reload_failed is False
         assert len(seq_modules[module_name]) == 1
         assert new_seq_name not in seq_modules[module_name]
@@ -284,7 +284,7 @@ def test_set_reload_to_true_when_module_failed_to_reload(shared_datadir, create_
     if file_modified:
         command_sequencer.set_reload(True)
 
-        seq_modules = command_sequencer.param_tree.get('sequence_modules')['sequence_modules']
+        seq_modules = command_sequencer.param_tree.get('sequence_modules')
         assert command_sequencer.module_reload_failed is False
         assert len(seq_modules[module_name]) == 2
         assert new_seq_name in seq_modules[module_name]
@@ -304,12 +304,12 @@ def test_set_reload_to_true_when_module_modified_with_syntax_error(shared_datadi
     await_queue_size(command_sequencer.manager.module_watcher, 1)
     test_reload_file_path = tmp_files[0]
 
-    with pytest.raises(
-            SequencerError, match="A problem occurred during the reloading process: "
-                                        "Syntax error loading {}".format(str(test_reload_file_path))
-    ):
-        command_sequencer.set_reload(True)
+    command_sequencer.set_reload(True)
     assert command_sequencer.module_reload_failed is True
+    assert command_sequencer.reload_status_msg == (
+        "A problem occurred during the reloading process: "
+        f"Syntax error loading {test_reload_file_path}: invalid syntax (test_reload.py, line 2)"
+    )
 
     command_sequencer.set_detect_module_modifications(False)
 
@@ -340,17 +340,16 @@ def test_execute_sequence_string_list_param(create_command_sequencer):
     file = 'sequences_with_list_params.py'
     seq_name = 'print_str_list'
     param_name = 'val'
-    path_to_seq = 'sequence_modules/sequences_with_list_params/' + seq_name
+    path_to_seq = f'sequence_modules/sequences_with_list_params/{seq_name}/{param_name}/value'
     new_list_val = ['Hello', 'World']
-    data = {param_name: {'value': new_list_val}}
+    data = {'value': new_list_val}
     command_sequencer = create_command_sequencer(file)
     command_sequencer.set(path_to_seq, data)
 
     command_sequencer.execute_sequence(seq_name)
     _await_execution_complete(command_sequencer)
-    command_sequencer.get_log_messages('')
-    log_messages = command_sequencer.log_messages
 
+    log_messages = command_sequencer.get_log_messages('')['log_messages']
     assert log_messages[0][1] == str(new_list_val)
 
 
@@ -358,16 +357,15 @@ def test_execute_sequence_int_list_param_int_values_passed_as_strings(create_com
     file = 'sequences_with_list_params.py'
     seq_name = 'print_int_list'
     param_name = 'val'
-    path_to_seq = 'sequence_modules/sequences_with_list_params/' + seq_name
+    path_to_seq = f'sequence_modules/sequences_with_list_params/{seq_name}/{param_name}/value'
     new_list_val = ['0', '1']
-    data = {param_name: {'value': new_list_val}}
+    data = {'value': new_list_val}
     command_sequencer = create_command_sequencer(file)
     command_sequencer.set(path_to_seq, data)
 
     command_sequencer.execute_sequence(seq_name)
     _await_execution_complete(command_sequencer)
-    command_sequencer.get_log_messages('')
-    log_messages = command_sequencer.log_messages
+    log_messages = command_sequencer.get_log_messages('')['log_messages']
 
     assert log_messages[0][1] == '[0, 1]'
 
@@ -376,9 +374,9 @@ def test_execute_sequence_int_list_param_non_int_values_passed_as_strings(create
     file = 'sequences_with_list_params.py'
     seq_name = 'print_int_list'
     param_name = 'val'
-    path_to_seq = 'sequence_modules/sequences_with_list_params/' + seq_name
+    path_to_seq = f'sequence_modules/sequences_with_list_params/{seq_name}/{param_name}/value'
     new_list_val = ['False', 'test']
-    data = {param_name: {'value': new_list_val}}
+    data = {'value': new_list_val}
     command_sequencer = create_command_sequencer(file)
     command_sequencer.set(path_to_seq, data)
 
@@ -388,8 +386,7 @@ def test_execute_sequence_int_list_param_non_int_values_passed_as_strings(create
     ):
         command_sequencer.execute_sequence(seq_name)
 
-    command_sequencer.get_log_messages('')
-    log_messages = command_sequencer.log_messages
+    log_messages = command_sequencer.get_log_messages('')['log_messages']
     assert command_sequencer.manager.is_executing is False
     assert len(log_messages) == 0
 
@@ -398,16 +395,15 @@ def test_execute_sequence_float_list_param_float_values_passed_as_strings(create
     file = 'sequences_with_list_params.py'
     seq_name = 'print_float_list'
     param_name = 'val'
-    path_to_seq = 'sequence_modules/sequences_with_list_params/' + seq_name
+    path_to_seq = f'sequence_modules/sequences_with_list_params/{seq_name}/{param_name}/value'
     new_list_val = ['0.5', '2.7']
-    data = {param_name: {'value': new_list_val}}
+    data = {'value': new_list_val}
     command_sequencer = create_command_sequencer(file)
     command_sequencer.set(path_to_seq, data)
 
     command_sequencer.execute_sequence(seq_name)
     _await_execution_complete(command_sequencer)
-    command_sequencer.get_log_messages('')
-    log_messages = command_sequencer.log_messages
+    log_messages = command_sequencer.get_log_messages('')['log_messages']
 
     assert log_messages[0][1] == '[0.5, 2.7]'
 
@@ -417,9 +413,9 @@ def test_execute_sequence_float_list_param_non_float_values_passed_as_strings(
     file = 'sequences_with_list_params.py'
     seq_name = 'print_float_list'
     param_name = 'val'
-    path_to_seq = 'sequence_modules/sequences_with_list_params/' + seq_name
+    path_to_seq = f'sequence_modules/sequences_with_list_params/{seq_name}/{param_name}/value'
     new_list_val = ['False', 'test']
-    data = {param_name: {'value': new_list_val}}
+    data = {'value': new_list_val}
     command_sequencer = create_command_sequencer(file)
     command_sequencer.set(path_to_seq, data)
 
@@ -429,8 +425,7 @@ def test_execute_sequence_float_list_param_non_float_values_passed_as_strings(
     ):
         command_sequencer.execute_sequence(seq_name)
 
-    command_sequencer.get_log_messages('')
-    log_messages = command_sequencer.log_messages
+    log_messages = command_sequencer.get_log_messages('')['log_messages']
     assert command_sequencer.manager.is_executing is False
     assert len(log_messages) == 0
 
@@ -440,16 +435,15 @@ def test_execute_sequence_float_list_param_bool_values_passed_as_strings(
     file = 'sequences_with_list_params.py'
     seq_name = 'print_bool_list'
     param_name = 'val'
-    path_to_seq = 'sequence_modules/sequences_with_list_params/' + seq_name
+    path_to_seq = f'sequence_modules/sequences_with_list_params/{seq_name}/{param_name}/value'
     new_list_val = ['True', 'False']
-    data = {param_name: {'value': new_list_val}}
+    data = {'value': new_list_val}
     command_sequencer = create_command_sequencer(file)
     command_sequencer.set(path_to_seq, data)
 
     command_sequencer.execute_sequence(seq_name)
     _await_execution_complete(command_sequencer)
-    command_sequencer.get_log_messages('')
-    log_messages = command_sequencer.log_messages
+    log_messages = command_sequencer.get_log_messages('')['log_messages']
 
     assert log_messages[0][1] == '[True, False]'
 
@@ -459,9 +453,9 @@ def test_execute_sequence_float_list_param_non_bool_values_passed_as_strings(
     file = 'sequences_with_list_params.py'
     seq_name = 'print_bool_list'
     param_name = 'val'
-    path_to_seq = 'sequence_modules/sequences_with_list_params/' + seq_name
+    path_to_seq = f'sequence_modules/sequences_with_list_params/{seq_name}/{param_name}/value'
     new_list_val = ['1', 'test']
-    data = {param_name: {'value': new_list_val}}
+    data = {'value': new_list_val}
     command_sequencer = create_command_sequencer(file)
     command_sequencer.set(path_to_seq, data)
 
@@ -471,8 +465,7 @@ def test_execute_sequence_float_list_param_non_bool_values_passed_as_strings(
     ):
         command_sequencer.execute_sequence(seq_name)
 
-    command_sequencer.get_log_messages('')
-    log_messages = command_sequencer.log_messages
+    log_messages = command_sequencer.get_log_messages('')['log_messages']
     assert command_sequencer.manager.is_executing is False
     assert len(log_messages) == 0
 
@@ -554,8 +547,7 @@ def test_get_log_messages_with_no_last_message_timestamp(shared_datadir, create_
     command_sequencer.execute_sequence('generate_message')
     _await_execution_complete(command_sequencer)
 
-    command_sequencer.get_log_messages('')
-    log_messages = command_sequencer.log_messages
+    log_messages = command_sequencer.get_log_messages('')['log_messages']
 
     assert len(log_messages) == len(list(command_sequencer.log_messages_deque))
     assert log_messages[0][1] == 'Executing generate_message'
@@ -571,8 +563,7 @@ def test_get_log_messages_with_last_message_timestamp(create_command_sequencer,
     _await_execution_complete(command_sequencer)
     last_message_timestamp = str(list(command_sequencer.log_messages_deque)[0][0])
 
-    command_sequencer.get_log_messages(last_message_timestamp)
-    log_messages = command_sequencer.log_messages
+    log_messages = command_sequencer.get_log_messages(last_message_timestamp)['log_messages']
 
     assert len(log_messages) == 1
     assert log_messages[0][1] == 'Executing get_message'
