@@ -54,6 +54,19 @@ Run the odin server while in the odin-sequencer directory
 
     $ odin_control --config config/odin_sequencer.cfg 
 
+Follow the instructions in the `odin-sequencer-ui` repo (found above or [here](https://github.com/stfc-aeg/odin-sequencer-ui)) to use the ui components in your own application.  
+Alternatively, run commandhttp_port  = 8888
+http_addr  = 192.168.0.6
+static_path = static/dist `wget https://github.com/stfc-aeg/odin-sequencer-ui/releases/download/<version>/app_build.tgz` and then unpackage that with `tar -xvzf` to use a small test application to see the components in-use. When doing this, ensure you edit the `static_path` in your `.cfg` file to reference the resulting `dist/` directory from the `.tgz`.
+
+Then you can access the UI from address `http.addr.http.addr:http_port` e.g. `127.0.0.1:8888`.
+
+```
+http_port  = 8888
+http_addr  = 127.0.0.1
+static_path = static/dist
+```
+
 Access the UI by navigating to :code:`localhost:8888` in your browser
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Loading sequences
