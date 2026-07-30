@@ -5,5 +5,5 @@ Tim Nicholls, UKRI STFC Detector Systems Software Group.
 """
 
 
-class CommandSequenceError(Exception):
+class SequencerError(Exception):
     """General exception class for the command sequencer package."""

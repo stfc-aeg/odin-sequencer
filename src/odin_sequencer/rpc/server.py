@@ -15,7 +15,7 @@ import zmq
 from zmq.error import ZMQError
 from zmq.eventloop.zmqstream import ZMQStream
 
-from ..exceptions import CommandSequenceError
+from ..exceptions import SequencerError
 from .exceptions import RpcServerError
 from .protocol import (
     ErrorParams,
@@ -324,7 +324,7 @@ class RpcServer:
             raise RpcServerError(
                 code=RpcErrorCode.AutoreloadError, message="Auto reload error", data="no enable parameter specified"
             )
-        except CommandSequenceError as seq_error:
+        except SequencerError as seq_error:
             raise RpcServerError(
                 code=RpcErrorCode.AutoreloadError, message="Auto reload error", data=str(seq_error)
             )

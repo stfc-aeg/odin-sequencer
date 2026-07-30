@@ -1,4 +1,4 @@
-"""CommandSequencer module
+"""SequencerController module
 
 Module which facilitates communication to the command sequencer manager.
 
@@ -10,20 +10,20 @@ import threading
 
 from collections import deque
 from datetime import datetime
-from odin_sequencer import CommandSequenceManager, CommandSequenceError
-from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
+from odin_sequencer import SequenceManager, SequencerError
+from odin_control.adapters.parameter_tree import ParameterTree, ParameterTreeError
 
 
-class CommandSequencer:
-    """CommandSequencer object representing the command sequencer manager.
+class SequencerController:
+    """SequencerController object representing the command sequencer manager.
 
     Facilitates communcation to the command sequence manager.
     """
 
     def __init__(self, options):
-        """Initialise the CommandSequencer object.
+        """Initialise the SequencerController object.
 
-        This constructor initialises the CommandSequencer object, creating a command
+        This constructor initialises the SequencerController object, creating a command
         sequencer manager, and building a parameter tree for it which allows clients
         to communicate with the manager.
         """
@@ -46,7 +46,7 @@ class CommandSequencer:
         self.path_or_paths = []
         self.sequence_modules = {}
 
-        self.manager = CommandSequenceManager()
+        self.manager = SequenceManager()
         self.manager.register_logger(self.log)
         self.manager_initialised = False
         self._initialise_manager()
@@ -66,8 +66,8 @@ class CommandSequencer:
 
     def _initialise_manager(self, raise_on_error=False):
         """Initialises the command sequence manager and sets up paramters accordingly. This is
-        called during initialisation of the CommandSequencer or subsequently on reload if the
-        manager has not been correctly initialised before. This allows the CommandSequencer to
+        called during initialisation of the SequencerController or subsequently on reload if the
+        manager has not been correctly initialised before. This allows the SequencerController to
         instantiate a valid manager even if there are errors in the sequences.
         """
 
@@ -78,12 +78,12 @@ class CommandSequencer:
             self.path_or_paths = list(self.manager.file_paths.values())
             self.sequence_modules = self.manager.sequence_modules
             self.manager_initialised = True
-        except CommandSequenceError as e:
+        except SequencerError as e:
             err_msg = "Failed to load command sequence manager: {}".format(e)
             self.log(err_msg, level="error")
             logging.error(err_msg)
             if raise_on_error:
-                raise CommandSequenceError(err_msg)
+                raise SequencerError(err_msg)
 
     def _build_param_tree(self):
         """Builds the parameter tree and as well as being called in the constructor, it is
@@ -91,7 +91,7 @@ class CommandSequencer:
         of the outcome of the reloading process (i.e. adding information about any new sequences
         that were added in the loaded module or vice versa).
         """
-       
+
         return ParameterTree(
             {
                 "sequence_modules": self.sequence_modules,
@@ -123,7 +123,7 @@ class CommandSequencer:
         """Get parameters from the underlying parameter tree.
 
         This method simply wraps underlying ParameterTree method so that an exceptions can be
-        re-raised with an appropriate CommandSequenceError.
+        re-raised with an appropriate SequencerError.
 
         :param path: path of parameter tree to get
         :returns: parameter tree at that path as a dictionary
@@ -132,17 +132,17 @@ class CommandSequencer:
             # Use query parameter if present
             timestamp = kwargs.get("last_message_timestamp", [""])[0] if kwargs else ""
             return self.get_log_messages(timestamp)
-        
+
         try:
             return self.param_tree.get(path)
         except ParameterTreeError as error:
-            raise CommandSequenceError(error)
+            raise SequencerError(error)
 
     def set(self, path, data):
         """Set parameter in the parameter tree.
 
         This method simply wraps underlying ParameterTree method so that an exceptions can be
-        re-raised with an appropriate CommandSequenceError.
+        re-raised with an appropriate SequencerError.
 
         :param path: path of parameter tree to set values for
         :param data: dictionary of new data values to set in the parameter tree
@@ -151,7 +151,7 @@ class CommandSequencer:
             self.param_tree.set(path, data)
         except ParameterTreeError as error:
             self.log(str(error), level="error")
-            raise CommandSequenceError(error)
+            raise SequencerError(error)
 
     def set_detect_module_modifications(self, detect_module_modifications):
         """Enable/ disable detect module modifications.
@@ -166,16 +166,16 @@ class CommandSequencer:
         if detect_module_modifications:
             try:
                 self.manager.enable_module_watching()
-            except CommandSequenceError as error:
-                raise CommandSequenceError(
+            except SequencerError as error:
+                raise SequencerError(
                     "A problem occurred while trying to start the "
                     + "Detect Modifications process: {}".format(error)
                 )
         else:
             try:
                 self.manager.disable_module_watching()
-            except CommandSequenceError as error:
-                raise CommandSequenceError(
+            except SequencerError as error:
+                raise SequencerError(
                     "A problem occurred while trying to stop the "
                     + "Detect Modifications process: {}".format(error)
                 )
@@ -212,14 +212,15 @@ class CommandSequencer:
             self.param_tree = self._build_param_tree()
             return
 
-        sequence_modules = self.param_tree.get("sequence_modules")["sequence_modules"]
+        sequence_modules = self.param_tree.get("sequence_modules")
+
         if not sequence_modules:
-            raise CommandSequenceError(
+            raise SequencerError(
                 "Cannot start the reloading process as there are no sequence modules loaded"
             )
 
         if self.manager.is_executing:
-            raise CommandSequenceError(
+            raise SequencerError(
                 "Cannot start the reloading process while a sequence is being executed"
             )
 
@@ -233,7 +234,7 @@ class CommandSequencer:
                 self.manager.resolve()
                 self.module_reload_failed = False
                 self.reload_status_msg = "Modules successfully reloaded!"
-            except CommandSequenceError as error:
+            except SequencerError as error:
                 self.module_reload_failed = True
                 self.reload_status_msg = f"A problem occurred during the reloading process: {error}"
                 logging.error(
@@ -283,18 +284,18 @@ class CommandSequencer:
         executed.
         """
         if self.manager.is_executing:
-            raise CommandSequenceError(
+            raise SequencerError(
                 "Cannot execute command sequence while another one is being executed"
             )
 
         if self.reload:
-            raise CommandSequenceError(
+            raise SequencerError(
                 "Cannot execute command sequence while the reloading process is in progress"
             )
 
-        sequence_modules = self.param_tree.get("sequence_modules")["sequence_modules"]
+        sequence_modules = self.param_tree.get("sequence_modules")
         if not any(seq_name in seq_module for seq_module in sequence_modules.values()):
-            raise CommandSequenceError("Missing command sequence: {}".format(seq_name))
+            raise SequencerError("Missing command sequence: {}".format(seq_name))
 
         (seq_mod, seq) = next(
             (
@@ -314,7 +315,7 @@ class CommandSequencer:
     def _execute(self, seq_name, **kwargs):
         try:
             self.manager.execute(seq_name, **kwargs)
-        except CommandSequenceError as error:
+        except SequencerError as error:
             self.manager.log_message('Execution error: {}: {}'.format(seq_name, error), level="error")
             logging.error("Sequence execution error: {}: {}".format(seq_name, error))
         finally:
@@ -328,7 +329,7 @@ class CommandSequencer:
 
     def abort_sequence(self, abort):
         if abort and not self.manager.is_executing:
-            raise CommandSequenceError("Cannot abort when no sequence is executing")
+            raise SequencerError("Cannot abort when no sequence is executing")
 
         logging.debug("Aborting sequence with value {}".format(abort))
         self.manager.abort_sequence = abort
@@ -342,7 +343,7 @@ class CommandSequencer:
         try:
             self.process_tasks.remove(task_uuid)
         except ValueError as error:
-            raise CommandSequenceError(
+            raise SequencerError(
                 "Empty process task list while trying to remove {}".format(task_uuid)
             )
 
@@ -371,8 +372,8 @@ class CommandSequencer:
                 self.process_group_tasks.pop(group_uuid)
                 return True
         except ValueError as error:
-            raise CommandSequenceError('Empty process task list while trying to remove group {} and task {}'.format(group_uuid, task_uuid))
-    
+            raise SequencerError('Empty process task list while trying to remove group {} and task {}'.format(group_uuid, task_uuid))
+
     def log(self, message, level):
         """This method is registered as a logger with the manager. Doing this results
         in all the print or log messages in the loaded sequences to be passed to this method. The method
@@ -429,7 +430,7 @@ class CommandSequencer:
                     try:
                         param_val = self._cast_list(list_type, param_val)
                     except ValueError as error:
-                        raise CommandSequenceError(
+                        raise SequencerError(
                             "Invalid list: {} - {}".format(param_name, error)
                         )
 

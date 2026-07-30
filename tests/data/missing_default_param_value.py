@@ -1,4 +1,4 @@
-# Command sequence for testing CommandSequenceManager without a default paramater value
+# Command sequence for testing SequenceManager without a default paramater value
 
 provides = ['basic_seq']
 

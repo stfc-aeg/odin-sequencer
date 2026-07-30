@@ -1,4 +1,4 @@
-"""Process Queue adapter for ODIN sequencer 
+"""Process Queue adapter for ODIN sequencer
 
 This class implements an adapter used for adding a process writer context and starts
 process monitor for the odin sequencer.
@@ -11,7 +11,7 @@ from celery import group, signature
 from odin_sequencer.process_queue import process_queue, process_monitor
 from odin_sequencer.tasks import *
 
-from odin.adapters.adapter import ApiAdapter
+from odin_control.adapters.adapter import ApiAdapter
 
 
 class ProcessQueueContextAdapter(ApiAdapter):
@@ -36,7 +36,7 @@ class ProcessQueueContextAdapter(ApiAdapter):
         logging.debug('ProcessQueueContextAdapter loaded')
 
     def initialize(self, adapters):
-        """Initialize the ondin sequencer adapter after it has been loaded and added ProcessWriter 
+        """Initialize the ondin sequencer adapter after it has been loaded and added ProcessWriter
         context to sequencer.
 
         Receive a dictionary of all loaded adapters so that they may be accessed by this adapter.
@@ -46,7 +46,7 @@ class ProcessQueueContextAdapter(ApiAdapter):
 
         self.adapters = dict((k, v) for k, v in adapters.items() if v is not self)
         logging.debug("Received following dict of Adapters: %s", self.adapters)
-        
+
         process_writer = ProcessWriter()
         self.adapters['odin_sequencer'].add_context('process_writer', process_writer)
         logging.debug("Process writer context added to odin sequencer.")
@@ -80,7 +80,7 @@ class ProcessWriter():
             signatures.append(
                 self._run.signature(
                     args=(
-                        function, 
+                        function,
                         self.list_append([i], *args) if args else [i]
                     ),
                 )
@@ -99,45 +99,45 @@ class ProcessWriter():
 
         if group_uuid:
             self.send_event(
-                'started-group-task', 
-                task_uuid = task_uuid, 
-                task_name = function, 
+                'started-group-task',
+                task_uuid = task_uuid,
+                task_name = function,
                 group_uuid = group_uuid
             )
         else:
             self.send_event(
-                'started-task', 
+                'started-task',
                 task_uuid = task_uuid,
                 task_name = function
             )
-        
+
         try:
             result = globals()[function](*args)
             if group_uuid:
                 self.send_event(
-                    'successful-group-task', 
-                    task_uuid = task_uuid, 
-                    task_name = function, 
+                    'successful-group-task',
+                    task_uuid = task_uuid,
+                    task_name = function,
                     group_uuid = group_uuid
                 )
             else:
                 self.send_event(
-                    'successful-task', 
-                    task_uuid = task_uuid, 
+                    'successful-task',
+                    task_uuid = task_uuid,
                     task_name = function
                 )
         except Exception as e:
             if group_uuid:
                 self.send_event(
-                    'failed-group-task', 
-                    task_uuid = task_uuid, 
-                    task_name = function, 
+                    'failed-group-task',
+                    task_uuid = task_uuid,
+                    task_name = function,
                     group_uuid = group_uuid
                 )
             else:
                 self.send_event(
-                    'failed-task', 
-                    task_uuid = task_uuid, 
+                    'failed-task',
+                    task_uuid = task_uuid,
                     task_name = function
                 )
             raise e

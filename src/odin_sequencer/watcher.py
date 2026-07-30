@@ -22,7 +22,7 @@ try:
 except (ImportError, OSError):
     INOTIFY_IMPORTED = False
 
-from .exceptions import CommandSequenceError
+from .exceptions import SequencerError
 
 
 class IFileWatcher(ABC):
@@ -44,7 +44,7 @@ class IFileWatcher(ABC):
         the _run function from the relevant concrete class in the new thread.
         """
         if self.is_watching:
-            raise CommandSequenceError(
+            raise SequencerError(
                 'File watcher has already been started'
             )
 
@@ -61,7 +61,7 @@ class IFileWatcher(ABC):
         from watching and setting self.is_watching to False.
         """
         if not self.is_watching:
-            raise CommandSequenceError(
+            raise SequencerError(
                 'Cannot stop file watcher as it has not been started'
             )
 
@@ -282,7 +282,7 @@ class FileWatcherFactory():
 
         if name:
             if name == 'inotify' and not INOTIFY_IMPORTED:
-                raise CommandSequenceError('The requested file watcher cannot be created because '
+                raise SequencerError('The requested file watcher cannot be created because '
                                            'the inotify module could not be found')
 
             file_watcher_class = FileWatcherFactory.__file_watcher_classes.get(name.lower(), None)
@@ -295,5 +295,5 @@ class FileWatcherFactory():
 
         if file_watcher_class:
             return file_watcher_class(*args, **kwargs)
-        raise CommandSequenceError('The requested file watcher cannot be created because it has '
+        raise SequencerError('The requested file watcher cannot be created because it has '
                                    'not been implemented')

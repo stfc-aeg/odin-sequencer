@@ -14,7 +14,7 @@ import os
 import importlib.util
 import pytest
 
-from odin_sequencer import CommandSequenceManager, CommandSequenceError
+from odin_sequencer import SequenceManager, SequencerError
 from .testutils import (modify_test_reload_module_file, modify_with_dependency_module_file,
                         get_last_modified_file_time, was_file_modified, await_queue_size)
 
@@ -33,7 +33,7 @@ def make_seq_manager(create_paths):
         else:
             paths = create_paths(file_or_files)
 
-        return CommandSequenceManager(paths)
+        return SequenceManager(paths)
 
     return _make_seq_manager
 
@@ -85,7 +85,9 @@ def test_basic_manager_loaded(make_seq_manager):
     assert len(basic_return_value_seq_params) == 1
     assert basic_return_value_seq_params['value']['default'] == 0
     assert basic_return_value_seq_params['value']['type'] == 'int'
-    assert basic_return_value_seq_params['value']['value'] == 0
+    # Values are not accessed directly anymore. value is a lambda: getter, setter
+    getter = basic_return_value_seq_params['value']['value'][0]
+    assert getter() == 0
     assert hasattr(manager, 'basic_read')
     assert hasattr(manager, 'basic_write')
 
@@ -97,7 +99,7 @@ def test_load_with_illegal_syntax(make_seq_manager):
     """
     file_name = 'illegal_syntax.py'
     with pytest.raises(
-            CommandSequenceError, match=r'Syntax error loading .*\/{}'.format(file_name)
+            SequencerError, match=r'Syntax error loading .*\/{}'.format(file_name)
     ):
         make_seq_manager(file_name)
 
@@ -109,7 +111,7 @@ def test_load_with_bad_import(make_seq_manager):
     """
     file_name = 'illegal_import.py'
     with pytest.raises(
-            CommandSequenceError, match=r'Import error loading .*\/{}'.format(file_name)
+            SequencerError, match=r'Import error loading .*\/{}'.format(file_name)
     ):
         make_seq_manager(file_name)
 
@@ -121,7 +123,7 @@ def test_load_with_missing_module(make_seq_manager):
     """
     file_name = 'does_not_exist.py'
     with pytest.raises(
-            CommandSequenceError, match=r'Sequence module file .*\/{} not found'.format(file_name)
+            SequencerError, match=r'Sequence module file .*\/{} not found'.format(file_name)
     ):
         make_seq_manager(file_name)
 
@@ -161,7 +163,7 @@ def test_load_with_missing_directory(shared_datadir, make_seq_manager):
     directory_path = shared_datadir.joinpath('missing_directory')
 
     with pytest.raises(
-            CommandSequenceError, match='Sequence directory {} not found'.format(directory_path)
+            SequencerError, match='Sequence directory {} not found'.format(directory_path)
     ):
         make_seq_manager(directory_path)
 
@@ -175,7 +177,7 @@ def test_load_with_already_registered_sequence_name(make_seq_manager, create_pat
     manager = make_seq_manager(module_name + '.py')
 
     with pytest.raises(
-            CommandSequenceError, match="Unable to load sequence '{}' from module '{}' as "
+            SequencerError, match="Unable to load sequence '{}' from module '{}' as "
                                         "a sequence with the same name has already being "
                                         "registered".format(seq_name, module_name)
     ):
@@ -191,7 +193,7 @@ def test_load_with_sequence_that_has_no_paramater_default_value(make_seq_manager
     seq_name = 'basic_seq'
     param_name = 'val'
     with pytest.raises(
-            CommandSequenceError, match="'{}' parameter in '{}' sequence does not have a default "
+            SequencerError, match="'{}' parameter in '{}' sequence does not have a default "
                                         "value".format(param_name, seq_name)
     ):
         make_seq_manager(file_name)
@@ -206,7 +208,7 @@ def test_load_with_sequence_that_has_list_parameter_with_no_elements(make_seq_ma
     seq_name = 'basic_seq'
     param_name = 'val'
     with pytest.raises(
-            CommandSequenceError, match="'{}' list parameter in '{}' sequence is empty".format(
+            SequencerError, match="'{}' list parameter in '{}' sequence is empty".format(
                 param_name, seq_name)
     ):
         make_seq_manager(file_name)
@@ -221,7 +223,7 @@ def test_load_with_sequence_that_has_list_parameter_with_list_element(make_seq_m
     seq_name = 'basic_seq'
     param_name = 'val'
     with pytest.raises(
-            CommandSequenceError, match="'{}' list parameter in '{}' sequence contains a "
+            SequencerError, match="'{}' list parameter in '{}' sequence contains a "
                                         "list element".format(param_name, seq_name)
     ):
         make_seq_manager(file_name)
@@ -236,7 +238,7 @@ def test_load_with_sequence_that_has_list_parameter_with_heterogeneous_elements(
     seq_name = 'basic_seq'
     param_name = 'val'
     with pytest.raises(
-            CommandSequenceError, match="'{}' list parameter in '{}' sequence contains "
+            SequencerError, match="'{}' list parameter in '{}' sequence contains "
                                         "elements of different types".format(param_name, seq_name)
     ):
         make_seq_manager(file_name)
@@ -363,7 +365,7 @@ def test_reload_with_path_to_not_loaded_module(make_seq_manager, shared_datadir)
     manager = make_seq_manager()
 
     with pytest.raises(
-            CommandSequenceError, match='Cannot reload file {} as it is not loaded '
+            SequencerError, match='Cannot reload file {} as it is not loaded '
                                         'into the manager'.format(module)
     ):
         manager.reload(file_paths=module)
@@ -378,7 +380,7 @@ def test_reload_with_not_loaded_module_name(make_seq_manager):
     manager = make_seq_manager()
 
     with pytest.raises(
-            CommandSequenceError, match='Cannot reload module {} as it is not loaded '
+            SequencerError, match='Cannot reload module {} as it is not loaded '
                                         'into the manager'.format(module)
     ):
         manager.reload(module_names=module)
@@ -429,7 +431,7 @@ def test_enable_module_watching_when_no_modules_loaded(make_seq_manager):
     manager = make_seq_manager()
 
     with pytest.raises(
-            CommandSequenceError, match='Cannot enable module watching when no modules are loaded'
+            SequencerError, match='Cannot enable module watching when no modules are loaded'
     ):
         manager.enable_module_watching()
 
@@ -466,7 +468,7 @@ def test_enable_module_watching_when_already_enabled(make_seq_manager):
     manager.enable_module_watching()
 
     with pytest.raises(
-            CommandSequenceError, match='Module watching has already been enabled'
+            SequencerError, match='Module watching has already been enabled'
     ):
         manager.enable_module_watching()
 
@@ -493,7 +495,7 @@ def test_disable_module_watching_when_not_enabled(make_seq_manager):
     manager = make_seq_manager()
 
     with pytest.raises(
-            CommandSequenceError, match='Module watching cannot be disabled as it has not ' +
+            SequencerError, match='Module watching cannot be disabled as it has not ' +
                                         'been enabled'
     ):
         manager.disable_module_watching()
@@ -535,7 +537,7 @@ def test_module_modifications_detected_when_no_module_watcher_created(make_seq_m
     manager = make_seq_manager()
 
     with pytest.raises(
-            CommandSequenceError, match='Cannot check if modifications were detected because a ' +
+            SequencerError, match='Cannot check if modifications were detected because a ' +
                                         'module watcher has not been created'
     ):
         manager.module_modifications_detected()
@@ -581,7 +583,7 @@ def test_get_modified_module_paths_when_no_module_watcher_created(make_seq_manag
     manager = make_seq_manager()
 
     with pytest.raises(
-            CommandSequenceError, match='Cannot get modified module paths because a module ' +
+            SequencerError, match='Cannot get modified module paths because a module ' +
             'watcher has not been created'
     ):
         manager.get_modified_module_paths()
@@ -611,7 +613,7 @@ def test_set_auto_reload_to_true_when_already_enabled(make_seq_manager):
     manager.set_auto_reload()
 
     with pytest.raises(
-            CommandSequenceError, match='Auto reloading has already been enabled'
+            SequencerError, match='Auto reloading has already been enabled'
     ):
         manager.set_auto_reload()
 
@@ -625,7 +627,7 @@ def test_set_auto_reload_to_true_when_no_modules_loaded(make_seq_manager):
     manager = make_seq_manager()
 
     with pytest.raises(
-            CommandSequenceError, match='Cannot enable auto reloading due to: Cannot enable ' +
+            SequencerError, match='Cannot enable auto reloading due to: Cannot enable ' +
                                         'module watching when no modules are loaded'
     ):
         manager.set_auto_reload()
@@ -654,7 +656,7 @@ def test_set_auto_reload_to_false_when_not_enabled(make_seq_manager):
     manager = make_seq_manager()
 
     with pytest.raises(
-            CommandSequenceError, match='Auto reloading cannot be disabled as it has ' +
+            SequencerError, match='Auto reloading cannot be disabled as it has ' +
                                         'not been enabled'
     ):
         manager.set_auto_reload(False)
@@ -691,7 +693,7 @@ def test_sequence_mismatched_provide(make_seq_manager):
     """
     file_stem = 'provide_mismatch'
     with pytest.raises(
-            CommandSequenceError, match='{} does not implement missing_sequence listed '
+            SequencerError, match='{} does not implement missing_sequence listed '
                                         'in its provided sequences'.format(file_stem)
     ):
         make_seq_manager('{}.py'.format(file_stem))
@@ -724,7 +726,7 @@ def test_sequence_missing_requires(make_seq_manager):
     """
     file = 'with_requires.py'
     with pytest.raises(
-            CommandSequenceError, match='Failed to resolve required command sequence modules'
+            SequencerError, match='Failed to resolve required command sequence modules'
     ):
         make_seq_manager(file)
 
@@ -890,7 +892,7 @@ def test_execute_missing_sequence(make_seq_manager):
     missing_sequence = 'basic_missing'
 
     with pytest.raises(
-            CommandSequenceError, match='Missing command sequence: {}'.format(missing_sequence)
+            SequencerError, match='Missing command sequence: {}'.format(missing_sequence)
     ):
         manager.execute(missing_sequence, 4567)
 
@@ -926,7 +928,9 @@ def test_access_context_in_sequence(make_seq_manager, context_object):
     assert len(context_access_seq_params) == 1
     assert context_access_seq_params['value']['default'] == 0
     assert context_access_seq_params['value']['type'] == 'int'
-    assert context_access_seq_params['value']['value'] == 0
+    # Values are not accessed directly anymore. value is a lambda: getter, setter
+    getter = context_access_seq_params['value']['value'][0]
+    assert getter() == 0
 
 
 def test_get_missing_context_object(make_seq_manager):
@@ -938,6 +942,6 @@ def test_get_missing_context_object(make_seq_manager):
     manager.add_context(obj_name, context_object)
 
     with pytest.raises(
-            CommandSequenceError, match=r'Manager context does not contain \S+'
+            SequencerError, match=r'Manager context does not contain \S+'
     ):
         manager.missing_context_obj()

@@ -16,7 +16,7 @@ import io
 from pathlib import Path
 from functools import partial
 from inspect import signature
-from .exceptions import CommandSequenceError
+from .exceptions import SequencerError
 from .watcher import FileWatcherFactory
 from .sequence_logger import SequenceLogger
 
@@ -27,7 +27,7 @@ if sys.version_info < (3, 6, 0):  # pragma: no cover
         """Derive ModuleNotFoundError exception for earlier python versions."""
 
 
-class CommandSequenceManager:
+class SequenceManager:
     """
     Command sequencer manager class.
 
@@ -115,15 +115,15 @@ class CommandSequenceManager:
             try:
                 spec.loader.exec_module(module)
             except SyntaxError as import_error:
-                raise CommandSequenceError(
+                raise SequencerError(
                     'Syntax error loading {}: {}'.format(file_path, import_error)
                 )
             except (ModuleNotFoundError, ImportError) as import_error:
-                raise CommandSequenceError(
+                raise SequencerError(
                     'Import error loading {}: {}'.format(file_path, import_error)
                 )
             except FileNotFoundError:
-                raise CommandSequenceError(
+                raise SequencerError(
                     'Sequence module file {} not found'.format(file_path)
                 )
 
@@ -139,7 +139,7 @@ class CommandSequenceManager:
                 # Do not load the sequence if one with the same name has already been registered
                 if (any(seq_name in val for val in self.provides.values()) or   # Other files
                         seq_name in sequences.keys()):                          # This file
-                    raise CommandSequenceError(
+                    raise SequencerError(
                         "Unable to load sequence '{}' from module '{}' as a sequence with the "
                         "same name has already being registered".format(seq_name, module_name)
                     )
@@ -155,7 +155,7 @@ class CommandSequenceManager:
                     setattr(self, seq_alias, seq)
                     setattr(self, seq_name, partial(self.execute, seq_alias))
                 except AttributeError:
-                    raise CommandSequenceError(
+                    raise SequencerError(
                         "{} does not implement {} listed in its provided sequences".format(
                             module_name, seq_name)
                     )
@@ -206,7 +206,7 @@ class CommandSequenceManager:
         """
         for param in seq_params:
             if param.default is inspect.Parameter.empty or param.default is None:
-                raise CommandSequenceError(
+                raise SequencerError(
                     "'{}' parameter in '{}' sequence does not have a default value".format(
                         param.name, seq_name)
                 )
@@ -225,19 +225,19 @@ class CommandSequenceManager:
         :param seq_name: the name of the sequence to which the list parameter belongs to
         """
         if len(param.default) == 0:
-            raise CommandSequenceError(
+            raise SequencerError(
                 "'{}' list parameter in '{}' sequence is empty".format(param.name, seq_name)
             )
 
         if any(isinstance(element, list) for element in param.default):
-            raise CommandSequenceError(
+            raise SequencerError(
                 "'{}' list parameter in '{}' sequence contains a list element".format(
                     param.name, seq_name
                 )
             )
 
         if not self._is_list_homogeneous(param.default):
-            raise CommandSequenceError(
+            raise SequencerError(
                 "'{}' list parameter in '{}' sequence contains elements of different "
                 "types".format(param.name, seq_name)
             )
@@ -282,7 +282,7 @@ class CommandSequenceManager:
     def _set_sequence_param_value(self, param_info, value):
         """This method sets the value of a sequence parameter in the tree."""
         if self._is_executing:
-            raise CommandSequenceError(
+            raise SequencerError(
                 "Cannot set parameter value while sequence is executing"
             )
         param_info["value"] = value
@@ -316,7 +316,7 @@ class CommandSequenceManager:
                     file_path = Path(file_path)
 
                 if file_path.stem not in self.modules:
-                    raise CommandSequenceError(
+                    raise SequencerError(
                         'Cannot reload file {} as it is not loaded into the manager'.format(
                             file_path)
                     )
@@ -329,7 +329,7 @@ class CommandSequenceManager:
 
             for module_name in module_names:
                 if module_name not in self.modules:
-                    raise CommandSequenceError(
+                    raise SequencerError(
                         'Cannot reload module {} as it is not loaded into the manager'.format(
                             module_name)
                     )
@@ -383,7 +383,7 @@ class CommandSequenceManager:
         module watching is attempted while enabled, or disabling while disabled.
         """
         if not self.modules:
-            raise CommandSequenceError('Cannot enable module watching when no modules are loaded')
+            raise SequencerError('Cannot enable module watching when no modules are loaded')
 
         if not self.module_watcher:
             self.module_watcher = FileWatcherFactory.create_file_watcher(
@@ -392,8 +392,8 @@ class CommandSequenceManager:
             self.module_watcher.add_watch(list(self.file_paths.values()))
             try:
                 self.module_watcher.run()
-            except CommandSequenceError:
-                raise CommandSequenceError('Module watching has already been enabled')
+            except SequencerError:
+                raise SequencerError('Module watching has already been enabled')
 
         self.module_watching = True
 
@@ -408,8 +408,8 @@ class CommandSequenceManager:
         try:
             self.module_watcher.stop()
             self.module_watching = False
-        except (AttributeError, CommandSequenceError):
-            raise CommandSequenceError(
+        except (AttributeError, SequencerError):
+            raise SequencerError(
                 'Module watching cannot be disabled as it has not been enabled')
 
     def module_modifications_detected(self):
@@ -420,7 +420,7 @@ class CommandSequenceManager:
         try:
             return not self.module_watcher.modified_files_queue.empty()
         except AttributeError:
-            raise CommandSequenceError('Cannot check if modifications were detected because a ' +
+            raise SequencerError('Cannot check if modifications were detected because a ' +
                                        'module watcher has not been created')
 
     def get_modified_module_paths(self):
@@ -429,7 +429,7 @@ class CommandSequenceManager:
         :return: a list of paths to the modified modules
         """
         if not self.module_watcher:
-            raise CommandSequenceError('Cannot get modified module paths because a module ' +
+            raise SequencerError('Cannot get modified module paths because a module ' +
                                        'watcher has not been created')
 
         paths = []
@@ -451,17 +451,17 @@ class CommandSequenceManager:
 
         if enabled:
             if self.auto_reload:
-                raise CommandSequenceError('Auto reloading has already been enabled')
+                raise SequencerError('Auto reloading has already been enabled')
 
             if not self.module_watching:
                 try:
                     self.enable_module_watching()
-                except CommandSequenceError as error:
-                    raise CommandSequenceError(
+                except SequencerError as error:
+                    raise SequencerError(
                         'Cannot enable auto reloading due to: {}'.format(error))
         else:
             if not self.auto_reload:
-                raise CommandSequenceError(
+                raise SequencerError(
                     'Auto reloading cannot be disabled as it has not been enabled')
 
         self.auto_reload = enabled
@@ -480,7 +480,7 @@ class CommandSequenceManager:
 
         if not directory_path.exists():
             # Raise an excpetion if the given directory does not exist
-            raise CommandSequenceError(
+            raise SequencerError(
                 'Sequence directory {} not found'.format(directory_path)
             )
 
@@ -501,7 +501,7 @@ class CommandSequenceManager:
         # Calculate if any dependencies are missing - if so, raise an exception.
         missing = dependencies - set(self.modules.keys())
         if missing:
-            raise CommandSequenceError(
+            raise SequencerError(
                 'Failed to resolve required command sequence modules (missing: {})'.format(
                     ','.join(missing)
                 )
@@ -603,7 +603,7 @@ class CommandSequenceManager:
                 self.reload(modified_module_paths)
 
         if not hasattr(self, sequence_name):
-            raise  CommandSequenceError(
+            raise  SequencerError(
                 'Missing command sequence: {}'.format(sequence_name)
             )
         # At new execution, end hooks should be reset
@@ -617,10 +617,10 @@ class CommandSequenceManager:
         try:
             self._is_executing = True
             return getattr(self, sequence_name)(*args, **kwargs)
-        except CommandSequenceError as error:
+        except SequencerError as error:
             raise error
         except:
-            raise CommandSequenceError(sys.exc_info()[1])
+            raise SequencerError(sys.exc_info()[1])
         finally:
             self._is_executing = False
             self._start_hooks_called = False
@@ -652,7 +652,7 @@ class CommandSequenceManager:
         :return: the named object
         """
         if name not in self.context:
-            raise CommandSequenceError('Manager context does not contain {}'.format(name))
+            raise SequencerError('Manager context does not contain {}'.format(name))
 
         return self.context[name]
 

@@ -1,4 +1,4 @@
-from odin_sequencer import CommandSequenceManager
+from odin_sequencer import SequenceManager
 from pathlib import Path
 
 def main():
@@ -9,7 +9,7 @@ def main():
         'dependencies/a.py', 'dependencies/b.py', 'dependencies/c.py', 'dependencies/d.py', 'dependencies/e.py'
     ]]
 
-    csm = CommandSequenceManager(paths)
+    csm = SequenceManager(paths)
 
     csm.a_one()
     csm.a_two()
